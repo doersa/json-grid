@@ -1,0 +1,1524 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JSON Table Split View</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --line: #e5e7eb;
+      --muted: #6b7280;
+      --text: #111827;
+      --blue: #2563eb;
+      --blue-soft: #eff6ff;
+      --red: #b91c1c;
+      --green: #166534;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    .app {
+      --left-pane-width: 25vw;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(220px, var(--left-pane-width, 25vw)) 8px minmax(320px, 1fr);
+      min-width: 900px;
+      transition: grid-template-columns .18s ease;
+    }
+
+    .app.input-collapsed {
+      grid-template-columns: 0 28px minmax(0, 1fr);
+    }
+
+    .input-pane,
+    .table-pane {
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .input-pane {
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .app.input-collapsed .input-pane {
+      pointer-events: none;
+    }
+
+    .split-resizer {
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 58px;
+      background: linear-gradient(90deg, transparent 0, transparent 2px, #d8dee9 2px, #d8dee9 6px, transparent 6px);
+      cursor: col-resize;
+      touch-action: none;
+      transition: background .14s ease;
+    }
+
+    .app.input-collapsed .split-resizer {
+      cursor: default;
+      background: #eef2ff;
+    }
+
+    .split-resizer::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 3px;
+      height: 42px;
+      border-radius: 999px;
+      background: #aeb8c7;
+      transform: translate(-50%, -50%);
+      opacity: .75;
+      transition: height .14s ease, background .14s ease, opacity .14s ease;
+    }
+
+    .split-resizer:hover::after,
+    .split-resizer.active::after {
+      height: 72px;
+      background: var(--blue);
+      opacity: 1;
+    }
+
+    .app.input-collapsed .split-resizer::after {
+      opacity: 0;
+    }
+
+    body.resizing-layout {
+      cursor: col-resize;
+      user-select: none;
+    }
+
+    .topbar {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, .96);
+    }
+
+    .brand {
+      margin-right: auto;
+      font-weight: 800;
+      letter-spacing: -.01em;
+    }
+
+    .subbrand {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    button {
+      border: 1px solid #d1d5db;
+      border-radius: 9px;
+      padding: 7px 10px;
+      color: #374151;
+      background: #fff;
+      cursor: pointer;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    button:hover { background: #f3f4f6; }
+
+    button.primary {
+      color: #fff;
+      border-color: var(--blue);
+      background: var(--blue);
+    }
+
+    button.primary:hover { background: #1d4ed8; }
+
+    .input-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      color: var(--muted);
+      background: #f9fafb;
+      border-bottom: 1px solid #eef0f3;
+      font-size: 12px;
+    }
+
+    .status {
+      margin-left: auto;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .status.ok { color: var(--green); }
+    .status.error { color: var(--red); }
+
+    textarea {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      resize: none;
+      border: 0;
+      outline: none;
+      padding: 14px;
+      color: #0f172a;
+      background: #fff;
+      font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      tab-size: 2;
+    }
+
+    .table-pane { background: #fff; }
+
+    .preview-head {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .preview-title { font-weight: 750; }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .pane-toggle {
+      position: relative;
+      z-index: 2;
+      width: 24px;
+      height: 40px;
+      padding: 0;
+      border-color: #bfdbfe;
+      border-radius: 999px;
+      color: var(--blue);
+      background: #fff;
+      box-shadow: 0 8px 18px rgba(37, 99, 235, .16);
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .pane-toggle:hover {
+      background: #dbeafe;
+    }
+
+    .app.input-collapsed .pane-toggle {
+      width: 22px;
+      height: 58px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+
+    textarea.locating {
+      animation: locatePulse .6s ease;
+    }
+
+    iframe.locating {
+      outline: 2px solid rgba(37, 99, 235, .35);
+      outline-offset: -2px;
+    }
+
+    @keyframes locatePulse {
+      0% { background: #fff7ed; }
+      100% { background: #fff; }
+    }
+
+    iframe {
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      border: 0;
+      background: #fff;
+    }
+
+    .error-preview {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      color: var(--red);
+      background: #fff7f7;
+      font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="input-pane">
+      <div class="topbar">
+        <div class="brand">JSON Input <span class="subbrand">→ Table</span></div>
+        <button id="formatBtn">格式化</button>
+        <button id="minifyBtn">压缩</button>
+        <button id="sampleBtn">示例</button>
+        <button id="clearBtn">清空</button>
+        <button id="renderBtn" class="primary">渲染</button>
+      </div>
+      <div class="input-head">
+        <span>左侧输入 JSON，右侧实时显示表格</span>
+        <span id="status" class="status">等待输入</span>
+      </div>
+      <textarea id="jsonInput" spellcheck="false" placeholder='{"hello":"world"}'></textarea>
+    </section>
+
+    <div id="splitResizer" class="split-resizer" title="拖拽调整左右宽度" role="separator" aria-label="调整左右面板宽度">
+      <button id="paneToggleBtn" class="pane-toggle" type="button" title="隐藏左侧 JSON">‹</button>
+    </div>
+
+    <section class="table-pane">
+      <div class="preview-head">
+        <span class="preview-title">JSON Table</span>
+        <span class="hint">支持过滤、排序、展开、复制、根路径切换；单击单元格可定位左侧 JSON</span>
+      </div>
+      <iframe id="preview" sandbox="allow-scripts allow-downloads"></iframe>
+    </section>
+  </div>
+
+  <script>
+    const visualizerScript = "let raw = pm.response.text();\n\ntry {\n  const root = pm.response.json();\n  const payload = root && Object.prototype.hasOwnProperty.call(root, \"DATA\")\n    ? root.DATA\n    : root && Object.prototype.hasOwnProperty.call(root, \"data\")\n      ? root.data\n      : root;\n\n  raw = JSON.stringify(payload, null, 2);\n} catch (e) {}\n\nconst template = `\n<style>\n  html, body {\n    margin: 0;\n    height: 100%;\n    font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Arial, sans-serif;\n  }\n\n  .app {\n    height: 100vh;\n    display: flex;\n    flex-direction: column;\n    background: #f7f8fb;\n    color: #172033;\n  }\n\n  .bar {\n    display: flex;\n    align-items: center;\n    gap: 10px;\n    padding: 10px 12px;\n    background: #fff;\n    border-bottom: 1px solid #e5e7eb;\n  }\n\n  .title {\n    font-weight: 700;\n  }\n\n  .meta {\n    margin-right: auto;\n    color: #6b7280;\n    font-size: 12px;\n  }\n\n  .meta-path {\n    display: inline-flex;\n    align-items: center;\n    gap: 2px;\n  }\n\n  .meta-path-btn {\n    border: 0;\n    background: transparent;\n    padding: 0 2px;\n    color: #2563eb;\n    font: inherit;\n    cursor: pointer;\n  }\n\n  .meta-path-btn:hover {\n    text-decoration: underline;\n    background: transparent;\n  }\n\n  .meta-path-sep {\n    color: #9ca3af;\n  }\n\n  .search {\n    width: 260px;\n    border: 1px solid #d1d5db;\n    border-radius: 8px;\n    padding: 7px 10px;\n  }\n\n  button {\n    border: 1px solid #d1d5db;\n    background: #fff;\n    border-radius: 8px;\n    padding: 7px 10px;\n    cursor: pointer;\n  }\n\n  button:hover {\n    background: #f3f4f6;\n  }\n\n  .settings-wrap {\n    position: relative;\n  }\n\n  .settings-btn {\n    width: 34px;\n    height: 34px;\n    padding: 0;\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    border-radius: 10px;\n    color: #4b5563;\n    background: #fff;\n    transition: background .14s ease, border-color .14s ease, color .14s ease, box-shadow .14s ease;\n  }\n\n  .settings-btn svg {\n    width: 16px;\n    height: 16px;\n    display: block;\n  }\n\n  .settings-btn:hover,\n  .settings-btn.active {\n    color: #1d4ed8;\n    border-color: #bfdbfe;\n    background: #eff6ff;\n    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);\n  }\n\n  .settings-menu {\n    position: absolute;\n    top: 38px;\n    right: 0;\n    width: 240px;\n    padding: 8px;\n    background: #fff;\n    border: 1px solid #e5e7eb;\n    border-radius: 12px;\n    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);\n    z-index: 50;\n  }\n\n  .settings-menu[hidden] {\n    display: none;\n  }\n\n  .settings-title {\n    padding: 2px 8px 7px;\n    color: #6b7280;\n    font-size: 11px;\n    font-weight: 700;\n  }\n\n  .setting-row {\n    display: flex;\n    align-items: center;\n    gap: 8px;\n    padding: 8px;\n    border-radius: 8px;\n    font-size: 12px;\n    color: #172033;\n    cursor: pointer;\n  }\n\n  .setting-row:hover {\n    background: #f3f4f6;\n  }\n\n  .settings-section {\n    border-top: 1px solid #eef0f3;\n    margin-top: 7px;\n    padding-top: 7px;\n  }\n\n  .settings-actions {\n    display: grid;\n    grid-template-columns: 1fr 1fr;\n    gap: 6px;\n  }\n\n  .settings-actions button,\n  .path-chip {\n    padding: 6px 7px;\n    font-size: 12px;\n  }\n\n  .column-list,\n  .path-list {\n    max-height: 150px;\n    overflow: auto;\n  }\n\n  .path-chip {\n    width: 100%;\n    margin-top: 4px;\n    overflow: hidden;\n    text-align: left;\n    text-overflow: ellipsis;\n    white-space: nowrap;\n  }\n\n  .search-hit {\n    background: #fef08a;\n    border-radius: 3px;\n    padding: 0 1px;\n  }\n\n  .filter-chips {\n    display: none;\n    gap: 6px;\n    padding: 7px 12px;\n    background: #fff;\n    border-bottom: 1px solid #eef0f3;\n    flex-wrap: wrap;\n  }\n\n  .filter-chips.active {\n    display: flex;\n  }\n\n  .filter-chip {\n    display: inline-flex;\n    align-items: center;\n    gap: 5px;\n    max-width: 260px;\n    padding: 4px 7px;\n    border: 1px solid #bfdbfe;\n    border-radius: 999px;\n    color: #1d4ed8;\n    background: #eff6ff;\n    font-size: 12px;\n  }\n\n  .filter-chip-text {\n    overflow: hidden;\n    text-overflow: ellipsis;\n    white-space: nowrap;\n  }\n\n  .filter-chip-remove {\n    width: 18px;\n    height: 18px;\n    padding: 0;\n    border: 0;\n    border-radius: 999px;\n    color: #1d4ed8;\n    background: transparent;\n    line-height: 1;\n  }\n\n  .filter-chip-remove:hover {\n    background: #dbeafe;\n  }\n\n  .value-th-wrap {\n    position: relative;\n    display: inline-flex;\n    align-items: center;\n    justify-content: flex-start;\n    gap: 6px;\n  }\n\n  .tree-menu-btn {\n    width: 26px;\n    height: 22px;\n    padding: 0;\n    border-radius: 5px;\n    border-color: #bfdbfe;\n    color: #1d4ed8;\n    background: #eff6ff;\n    font-size: 13px;\n    line-height: 1;\n  }\n\n  .tree-menu-btn:hover {\n    background: #dbeafe;\n  }\n\n  .tree-menu {\n    position: fixed;\n    width: 150px;\n    display: flex;\n    flex-direction: column;\n    padding: 6px;\n    background: #fff;\n    border: 1px solid #d1d5db;\n    border-radius: 10px;\n    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16);\n    z-index: 9999;\n  }\n\n  .tree-action {\n    border: 0;\n    border-radius: 6px;\n    padding: 7px 8px;\n    text-align: left;\n    font-size: 12px;\n    background: #fff;\n  }\n\n  .tree-action:hover {\n    background: #f3f4f6;\n  }\n\n  .content {\n    flex: 1;\n    overflow: auto;\n    padding: 12px;\n  }\n\n  table.grid {\n    width: 100%;\n    border-collapse: collapse;\n    background: #fff;\n    border: 1px solid #e5e7eb;\n  }\n\n  table.grid th,\n  table.grid td {\n    border-bottom: 1px solid #eef0f3;\n    border-right: 1px solid #eef0f3;\n    padding: 8px 10px;\n    vertical-align: top;\n    word-break: break-word;\n  }\n\n  table.grid th {\n    padding-right: 18px;\n  }\n\n  table.grid th:last-child,\n  table.grid td:last-child {\n    border-right: 0;\n  }\n\n  table.grid th {\n    background: #f3f4f6;\n    text-align: left;\n    font-size: 12px;\n    color: #4b5563;\n    min-width: 80px;\n  }\n\n  .content.freeze-header table.root-grid > thead th {\n    position: sticky;\n    top: 0;\n    z-index: 3;\n  }\n\n  table.grid .key-col,\n  table.grid .type-col,\n  table.grid .index-col {\n    width: 1%;\n    white-space: nowrap;\n  }\n\n  table.grid .key-col {\n    min-width: 90px;\n  }\n\n  table.grid .type-col {\n    min-width: 72px;\n  }\n\n  table.grid .value-col {\n    width: auto;\n  }\n\n  .content.freeze-header table.grid th:first-child,\n  .content.freeze-header table.grid td:first-child {\n    position: sticky;\n    left: 0;\n    background: #fff;\n    z-index: 2;\n  }\n\n  .content.freeze-header table.grid th:first-child {\n    z-index: 7;\n    background: #f3f4f6;\n  }\n\n  table.grid.nested-grid th {\n    position: static;\n    top: auto;\n    z-index: auto;\n    background: #f3f4f6;\n  }\n\n  table.grid.nested-grid td:first-child {\n    position: static;\n    left: auto;\n    z-index: auto;\n  }\n\n  table.grid.nested-grid th:first-child {\n    position: static;\n    left: auto;\n    z-index: auto;\n  }\n\n  .col-resizer {\n    position: absolute;\n    top: 0;\n    right: -3px;\n    width: 7px;\n    height: 100%;\n    cursor: col-resize;\n    z-index: 4;\n  }\n\n  .col-resizer:hover {\n    background: rgba(37, 99, 235, 0.16);\n  }\n\n  body.resizing-col {\n    cursor: col-resize;\n    user-select: none;\n  }\n    .th-wrap {\n    position: relative;\n    display: flex;\n    align-items: center;\n    gap: 6px;\n    justify-content: flex-start;\n  }\n\n  .th-left {\n    min-width: 0;\n    display: inline-flex;\n    align-items: center;\n    gap: 6px;\n  }\n\n  .th-title {\n    border: 0;\n    background: transparent;\n    padding: 0;\n    color: inherit;\n    font: inherit;\n    font-weight: 700;\n    overflow: hidden;\n    text-overflow: ellipsis;\n  }\n\n  .th-title:hover {\n    background: transparent;\n    color: #2563eb;\n    text-decoration: underline;\n  }\n\n  .sort-mark {\n    color: #2563eb;\n    font-size: 11px;\n  }\n\n  .filter-btn {\n    width: 22px;\n    height: 22px;\n    padding: 0;\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    border-radius: 5px;\n    font-size: 12px;\n    line-height: 1;\n  }\n\n  .filter-btn svg {\n    width: 13px;\n    height: 13px;\n    display: block;\n  }\n\n  .filter-btn.active {\n    color: #fff;\n    background: #2563eb;\n    border-color: #2563eb;\n  }\n\n  .filter-menu {\n    position: fixed;\n    top: -9999px;\n    left: -9999px;\n    right: auto;\n    width: 260px;\n    max-height: 360px;\n    display: flex;\n    flex-direction: column;\n    gap: 8px;\n    padding: 10px;\n    background: #fff;\n    border: 1px solid #d1d5db;\n    border-radius: 10px;\n    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.20);\n    z-index: 10050;\n    color: #172033;\n    visibility: hidden;\n  }\n\n  .filter-menu input[type=\"text\"],\n  .filter-menu select {\n    width: 100%;\n    box-sizing: border-box;\n    border: 1px solid #d1d5db;\n    border-radius: 6px;\n    padding: 6px 8px;\n    font-size: 12px;\n    background: #fff;\n  }\n\n  .filter-condition {\n    display: grid;\n    grid-template-columns: 108px 1fr;\n    gap: 6px;\n  }\n\n  .filter-actions {\n    display: flex;\n    gap: 6px;\n  }\n\n  .filter-actions button {\n    flex: 1;\n    padding: 5px 6px;\n    font-size: 12px;\n  }\n\n  .value-list {\n    max-height: 180px;\n    overflow: auto;\n    border: 1px solid #eef0f3;\n    border-radius: 8px;\n  }\n\n  .check-row {\n    display: flex;\n    align-items: center;\n    gap: 6px;\n    padding: 6px 8px;\n    border-bottom: 1px solid #f1f3f5;\n    font-weight: 400;\n    color: #172033;\n  }\n\n  .check-row:last-child {\n    border-bottom: 0;\n  }\n\n  .check-label {\n    flex: 1;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    white-space: nowrap;\n  }\n\n  .check-count {\n    color: #6b7280;\n    font-size: 11px;\n  }\n\n  .type {\n    color: #6b7280;\n    font-size: 12px;\n  }\n\n  .number-value,\n  .type-number {\n    font-weight: 700;\n  }\n\n  .key-jump {\n    border: 0;\n    background: transparent;\n    padding: 0;\n    color: #2563eb;\n    font: inherit;\n    font-weight: 600;\n    cursor: pointer;\n  }\n\n  .key-jump:hover {\n    text-decoration: underline;\n    background: transparent;\n  }\n\n  .json-string-badge,\n  .json-parse-warn-badge {\n    display: inline-flex;\n    align-items: center;\n    margin-right: 5px;\n    padding: 1px 5px;\n    border-radius: 999px;\n    font-size: 11px;\n    font-weight: 700;\n  }\n\n  .json-string-badge {\n    color: #166534;\n    background: #dcfce7;\n  }\n\n  .json-parse-warn-badge {\n    color: #92400e;\n    background: #fef3c7;\n  }\n\n  .summary-main {\n    display: inline-flex;\n    align-items: center;\n    gap: 4px;\n  }\n\n  .node-actions {\n    display: inline-flex;\n    gap: 4px;\n    margin-left: 8px;\n    vertical-align: middle;\n  }\n\n  .node-action {\n    padding: 1px 5px;\n    border-radius: 5px;\n    font-size: 11px;\n    color: #4b5563;\n    background: #fff;\n  }\n\n  .node-action:hover {\n    color: #1d4ed8;\n    border-color: #bfdbfe;\n    background: #eff6ff;\n  }\n\n  .node-action[disabled] {\n    display: none;\n  }\n\n  details {\n    margin: 0;\n  }\n\n  summary {\n    cursor: pointer;\n    color: #2563eb;\n    list-style: none;\n  }\n\n  summary::-webkit-details-marker {\n    display: none;\n  }\n\n  .muted {\n    color: #6b7280;\n  }\n\n  pre {\n    margin: 0;\n    padding: 12px;\n    background: #fff;\n    border: 1px solid #e5e7eb;\n    white-space: pre-wrap;\n    word-break: break-word;\n  }\n\n  .empty {\n    margin-top: 12px;\n    padding: 24px;\n    color: #6b7280;\n    background: #fff;\n    border: 1px dashed #d1d5db;\n    border-radius: 10px;\n  }\n\n  .perf-note {\n    margin: 8px 0;\n    padding: 8px 10px;\n    color: #92400e;\n    background: #fffbeb;\n    border: 1px solid #fde68a;\n    border-radius: 8px;\n    font-size: 12px;\n  }\n  \n  .path-select {\n    max-width: 260px;\n    border: 1px solid #d1d5db;\n    border-radius: 8px;\n    padding: 7px 10px;\n    background: #fff;\n  }\n\n  .sticky-context {\n    display: none;\n    align-items: center;\n    gap: 8px;\n    min-height: 32px;\n    padding: 6px 12px;\n    color: #1f2937;\n    background: rgba(255, 255, 255, .96);\n    border-bottom: 1px solid #dbeafe;\n    box-shadow: 0 6px 18px rgba(15, 23, 42, .08);\n    z-index: 8;\n    font-size: 12px;\n  }\n\n  .sticky-context.active {\n    display: flex;\n  }\n\n  .sticky-context-label {\n    color: #6b7280;\n    font-weight: 600;\n  }\n\n  .sticky-context-path {\n    overflow: hidden;\n    color: #2563eb;\n    font-weight: 700;\n    text-overflow: ellipsis;\n    white-space: nowrap;\n  }\n\n  .sticky-context-summary {\n    color: #6b7280;\n    white-space: nowrap;\n  }\n\n  .sticky-context button {\n    margin-left: auto;\n    padding: 3px 7px;\n    border-radius: 6px;\n    font-size: 12px;\n  }\n\n  .sticky-table-head {\n    position: fixed;\n    display: none;\n    overflow: hidden;\n    background: #f3f4f6;\n    border-bottom: 1px solid #dbe3ef;\n    box-shadow: 0 4px 12px rgba(15, 23, 42, .06);\n    z-index: 40;\n  }\n\n  .sticky-table-head.active {\n    display: block;\n  }\n\n  .sticky-table-head.multi {\n    inset: 0 auto auto 0;\n    width: 100vw !important;\n    height: 100vh !important;\n    overflow: visible;\n    background: transparent;\n    border-bottom: 0;\n    box-shadow: none;\n    pointer-events: none;\n  }\n\n  .sticky-table-head-inner {\n    pointer-events: none;\n  }\n\n  .sticky-head-layer {\n    position: fixed;\n    overflow: hidden;\n    background: #f3f4f6;\n    border: 1px solid #dbe3ef;\n    border-radius: 6px;\n    box-shadow: 0 6px 16px rgba(15, 23, 42, .08);\n    pointer-events: none;\n  }\n\n  .sticky-head-layer-inner {\n    height: 100%;\n    pointer-events: none;\n  }\n\n  .sticky-table-head table {\n    height: 100%;\n    border-collapse: collapse;\n    table-layout: fixed;\n    background: #f3f4f6;\n  }\n\n  .sticky-table-head thead,\n  .sticky-table-head tr {\n    height: 100%;\n  }\n\n  .sticky-table-head th {\n    box-sizing: border-box;\n    height: 100%;\n    border-right: 1px solid #eef0f3;\n    padding: 8px 10px;\n    overflow: hidden;\n    color: #4b5563;\n    background: #f3f4f6;\n    font-size: 12px;\n    text-align: left;\n    vertical-align: middle;\n  }\n\n  .sticky-table-head .th-wrap,\n  .sticky-table-head .th-left {\n    height: 100%;\n    overflow: hidden;\n    align-items: center;\n  }\n\n  .sticky-table-head .filter-menu,\n  .sticky-table-head .col-resizer {\n    display: none;\n  }\n\n  .toast {\n    position: fixed;\n    right: 14px;\n    bottom: 14px;\n    padding: 8px 10px;\n    color: #fff;\n    background: rgba(15, 23, 42, .9);\n    border-radius: 8px;\n    font-size: 12px;\n    z-index: 10000;\n  }\n<\/style>\n\n<div class=\"app\">\n  <div class=\"bar\">\n    <div class=\"title\">JSON Table<\/div>\n    <div class=\"meta\" id=\"meta\"><\/div>\n    <button id=\"pathUp\" title=\"上一级路径\">上级<\/button>\n    <select id=\"pathSelect\" class=\"path-select\"><\/select>\n    <input id=\"globalSearch\" class=\"search\" placeholder=\"全局搜索\">\n    <button id=\"resetFilters\">重置过滤<\/button>\n    <button id=\"toggle\">原始<\/button>\n    <div class=\"settings-wrap\" id=\"settingsWrap\">\n      <button id=\"settingsBtn\" class=\"settings-btn\" title=\"设置\" aria-label=\"设置\" aria-expanded=\"false\">\n        <svg viewBox=\"0 0 16 16\" aria-hidden=\"true\">\n          <path d=\"M3 4.5h10M3 11.5h10\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"/>\n          <circle cx=\"6\" cy=\"4.5\" r=\"1.7\" fill=\"#fff\" stroke=\"currentColor\" stroke-width=\"1.2\"/>\n          <circle cx=\"10\" cy=\"11.5\" r=\"1.7\" fill=\"#fff\" stroke=\"currentColor\" stroke-width=\"1.2\"/>\n        <\/svg>\n      <\/button>\n      <div id=\"settingsMenu\" class=\"settings-menu\" hidden>\n        <div class=\"settings-title\">设置<\/div>\n        <label class=\"setting-row\">\n          <input id=\"showTypeCheck\" type=\"checkbox\">\n          <span>显示 Type 列<\/span>\n        <\/label>\n        <label class=\"setting-row\">\n          <input id=\"freezeHeaderCheck\" type=\"checkbox\">\n          <span>冻结表头<\/span>\n        <\/label>\n        <label class=\"setting-row\">\n          <input id=\"showStickyHeaderCheck\" type=\"checkbox\">\n          <span>显示层级浮动表头<\/span>\n        <\/label>\n        <label class=\"setting-row\">\n          <input id=\"parseJsonStringCheck\" type=\"checkbox\">\n          <span>解析 JSON 字符串<\/span>\n        <\/label>\n        <label class=\"setting-row\">\n          <span>浮动表头模式<\/span>\n          <select id=\"headerModeSelect\" style=\"margin-left:auto;max-width:96px\">\n            <option value=\"single\">单层<\/option>\n            <option value=\"multi\">多层<\/option>\n          <\/select>\n        <\/label>\n        <div class=\"settings-section\">\n          <div class=\"settings-title\">字段显示<\/div>\n          <div id=\"columnSettings\" class=\"column-list\"><\/div>\n        <\/div>\n        <div class=\"settings-section\">\n          <div class=\"settings-title\">复制 / 导出<\/div>\n          <div class=\"settings-actions\">\n            <button id=\"copyPathBtn\">复制路径<\/button>\n            <button id=\"copyJsonBtn\">复制 JSON<\/button>\n            <button id=\"exportJsonBtn\">导出 JSON<\/button>\n            <button id=\"exportCsvBtn\">导出 CSV<\/button>\n          <\/div>\n        <\/div>\n        <div class=\"settings-section\">\n          <div class=\"settings-title\">路径<\/div>\n          <button id=\"favPathBtn\" class=\"path-chip\">收藏当前路径<\/button>\n          <div id=\"pathShortcuts\" class=\"path-list\"><\/div>\n        <\/div>\n      <\/div>\n    <\/div>\n  <\/div>\n  <div class=\"filter-chips\" id=\"filterChips\"><\/div>\n  <div class=\"sticky-context\" id=\"stickyContextBar\" title=\"当前滚动层级\">\n    <span class=\"sticky-context-label\">当前层级<\/span>\n    <span class=\"sticky-context-path\" id=\"stickyContextPath\"><\/span>\n    <span class=\"sticky-context-summary\" id=\"stickyContextSummary\"><\/span>\n    <button id=\"stickyContextJump\" type=\"button\">定位<\/button>\n  <\/div>\n  <div class=\"sticky-table-head\" id=\"stickyTableHead\">\n    <div class=\"sticky-table-head-inner\" id=\"stickyTableHeadInner\"><\/div>\n  <\/div>\n  <div class=\"content\" id=\"content\"><\/div>\n<\/div>\n\n<script>\n  pm.getData(function (err, data) {\n    var raw = data.raw || \"\";\n    var content = document.getElementById(\"content\");\n    var stickyContextBar = document.getElementById(\"stickyContextBar\");\n    var stickyContextPath = document.getElementById(\"stickyContextPath\");\n    var stickyContextSummary = document.getElementById(\"stickyContextSummary\");\n    var stickyContextJump = document.getElementById(\"stickyContextJump\");\n    var filterChips = document.getElementById(\"filterChips\");\n    var stickyTableHead = document.getElementById(\"stickyTableHead\");\n    var stickyTableHeadInner = document.getElementById(\"stickyTableHeadInner\");\n    var meta = document.getElementById(\"meta\");\n    var toggle = document.getElementById(\"toggle\");\n    var settingsWrap = document.getElementById(\"settingsWrap\");\n    var settingsBtn = document.getElementById(\"settingsBtn\");\n    var settingsMenu = document.getElementById(\"settingsMenu\");\n    var showTypeCheck = document.getElementById(\"showTypeCheck\");\n    var freezeHeaderCheck = document.getElementById(\"freezeHeaderCheck\");\n    var showStickyHeaderCheck = document.getElementById(\"showStickyHeaderCheck\");\n    var parseJsonStringCheck = document.getElementById(\"parseJsonStringCheck\");\n    var headerModeSelect = document.getElementById(\"headerModeSelect\");\n    var columnSettings = document.getElementById(\"columnSettings\");\n    var copyPathBtn = document.getElementById(\"copyPathBtn\");\n    var copyJsonBtn = document.getElementById(\"copyJsonBtn\");\n    var exportJsonBtn = document.getElementById(\"exportJsonBtn\");\n    var exportCsvBtn = document.getElementById(\"exportCsvBtn\");\n    var favPathBtn = document.getElementById(\"favPathBtn\");\n    var pathShortcuts = document.getElementById(\"pathShortcuts\");\n    var globalSearch = document.getElementById(\"globalSearch\");\n    var resetFilters = document.getElementById(\"resetFilters\");\n    var pathSelect = document.getElementById(\"pathSelect\");\n    var pathUp = document.getElementById(\"pathUp\");\n\n    var showTable = true;\n    var showTypeColumn = false;\n    var json;\n    var tableRows = null;\n    var tablePath = \"$\";\n    var selectedPath = \"$\";\n    var nodesByPath = {};\n    var columnFilters = {};\n    var activeFilterColumn = null;\n    var sortState = { col: null, dir: null };\n    var columnWidths = {};\n    var hiddenColumnsByPath = {};\n    var renderedNodesByPath = {};\n    var parseFailureSamples = {};\n    var currentAllColumns = [];\n    var currentColumns = [];\n    var currentRows = [];\n    var recentPaths = [\"$\"];\n    var favoritePaths = {};\n    var MAX_RENDER_ROWS = 2000;\n    var treeMenuOpen = false;\n    var activeTreeTable = null;\n    var activeTreeColumnIndex = -1;\n    var expandedDetailPaths = {};\n    var suppressDetailToggle = false;\n    var stickyContextPathValue = \"\";\n    var stickyContextTicking = false;\n    var stickyTableHeadKey = \"\";\n    var stickyHeaderMode = \"single\";\n    var showStickyHeader = true;\n    var parseJsonString = true;\n    var freezeHeader = false;\n    var STORAGE_KEY = \"apifox-json-table-state-v2\";\n    var LARGE_JSON_CHARS = 500000;\n    var LARGE_SEARCH_CHARS = 250000;\n\n    try {\n      json = JSON.parse(raw);\n    } catch (e) {\n      meta.textContent = \"非 JSON 响应\";\n      content.innerHTML = \"<pre><\/pre>\";\n      content.querySelector(\"pre\").textContent = raw;\n      return;\n    }\n\n    function esc(v) {\n      return String(v)\n        .replace(/&/g, \"&amp;\")\n        .replace(/<\/g, \"&lt;\")\n        .replace(/>/g, \"&gt;\")\n        .replace(/\"/g, \"&quot;\");\n    }\n\n    function safeStorageGet(key) {\n      try { return localStorage.getItem(key); } catch (e) { return null; }\n    }\n\n    function safeStorageSet(key, value) {\n      try { localStorage.setItem(key, value); } catch (e) {}\n    }\n\n    function isPlainObject(v) {\n      return v && typeof v === \"object\" && !Array.isArray(v);\n    }\n\n    function loadPersistedState() {\n      var saved = safeStorageGet(STORAGE_KEY);\n      if (!saved) return;\n\n      try {\n        var state = JSON.parse(saved);\n        if (!isPlainObject(state)) return;\n\n        showTypeColumn = !!state.showTypeColumn;\n        freezeHeader = !!state.freezeHeader;\n        showStickyHeader = state.showStickyHeader !== false;\n        parseJsonString = state.parseJsonString !== false;\n        stickyHeaderMode = state.stickyHeaderMode === \"multi\" ? \"multi\" : \"single\";\n        columnWidths = isPlainObject(state.columnWidths) ? state.columnWidths : {};\n        hiddenColumnsByPath = isPlainObject(state.hiddenColumnsByPath) ? state.hiddenColumnsByPath : {};\n        favoritePaths = isPlainObject(state.favoritePaths) ? state.favoritePaths : {};\n        recentPaths = Array.isArray(state.recentPaths) && state.recentPaths.length ? state.recentPaths.slice(0, 6) : recentPaths;\n      } catch (e) {}\n    }\n\n    function savePersistedState() {\n      safeStorageSet(STORAGE_KEY, JSON.stringify({\n        showTypeColumn: showTypeColumn,\n        freezeHeader: freezeHeader,\n        showStickyHeader: showStickyHeader,\n        parseJsonString: parseJsonString,\n        stickyHeaderMode: stickyHeaderMode,\n        columnWidths: columnWidths,\n        hiddenColumnsByPath: hiddenColumnsByPath,\n        favoritePaths: favoritePaths,\n        recentPaths: recentPaths\n      }));\n    }\n        function isObj(v) {\n      return v && typeof v === \"object\" && !Array.isArray(v);\n    }\n\n    function highlightText(text) {\n      var rawText = String(text);\n      var q = globalSearch.value.trim();\n      if (!q) return esc(rawText);\n\n      var lower = rawText.toLowerCase();\n      var needle = q.toLowerCase();\n      var html = \"\";\n      var from = 0;\n      var index = lower.indexOf(needle);\n\n      while (index >= 0) {\n        html += esc(rawText.slice(from, index));\n        html += '<span class=\"search-hit\">' + esc(rawText.slice(index, index + q.length)) + '<\/span>';\n        from = index + q.length;\n        index = lower.indexOf(needle, from);\n      }\n\n      return html + esc(rawText.slice(from));\n    }\n\n    function typeOf(v) {\n      if (Array.isArray(v)) return \"array\";\n      if (v === null) return \"null\";\n      return typeof v;\n    }\n\n    function valueText(v) {\n      if (v === undefined) return \"\";\n      if (v === null) return \"null\";\n      if (typeof v === \"string\") return v;\n      if (typeof v === \"number\" || typeof v === \"boolean\") return String(v);\n      return JSON.stringify(v);\n    }\n\n    function summarize(v) {\n      if (v === undefined) return \"\";\n      if (v === null) return \"null\";\n      if (Array.isArray(v)) return \"[\" + v.length + \" items]\";\n      if (isObj(v)) return \"{\" + Object.keys(v).length + \" keys}\";\n      return String(v);\n    }\n\n    function tryParseJsonStringValue(v) {\n      if (!parseJsonString || typeof v !== \"string\") return null;\n\n      var text = v.trim();\n      if (!text || (text[0] !== \"{\" && text[0] !== \"[\")) return null;\n\n      try {\n        var parsed = JSON.parse(text);\n        return parsed && typeof parsed === \"object\" ? parsed : null;\n      } catch (e) {\n        parseFailureSamples[text.slice(0, 120)] = true;\n        return null;\n      }\n    }\n\n    function isRecordArray(v) {\n      return Array.isArray(v) && v.length > 0 && v.every(function (item) {\n        return isObj(item);\n      });\n    }\n\n    function collectColumns(rows) {\n      var cols = [];\n      rows.forEach(function (row) {\n        if (!isObj(row)) return;\n        Object.keys(row).forEach(function (k) {\n          if (cols.indexOf(k) < 0) cols.push(k);\n        });\n      });\n      return cols;\n    }\n\n    function getHiddenColumns(path) {\n      hiddenColumnsByPath[path] = hiddenColumnsByPath[path] || {};\n      return hiddenColumnsByPath[path];\n    }\n\n    function getVisibleColumns(cols, path) {\n      var hidden = getHiddenColumns(path);\n      var visible = cols.filter(function (col) {\n        return !hidden[col];\n      });\n      return visible.length ? visible : cols;\n    }\n\n    function setColumnVisible(path, col, visible) {\n      var hidden = getHiddenColumns(path);\n      if (visible) {\n        delete hidden[col];\n      } else {\n        hidden[col] = true;\n      }\n      savePersistedState();\n      render();\n    }\n\n    function findFirstRecordArray(v, path) {\n      if (isRecordArray(v)) {\n        return { rows: v, path: path || \"$\" };\n      }\n\n      if (Array.isArray(v)) {\n        for (var i = 0; i < v.length; i++) {\n          var foundInArray = findFirstRecordArray(v[i], (path || \"$\") + \"[\" + i + \"]\");\n          if (foundInArray) return foundInArray;\n        }\n      }\n\n      if (isObj(v)) {\n        var keys = Object.keys(v);\n        for (var j = 0; j < keys.length; j++) {\n          var key = keys[j];\n          var foundInObject = findFirstRecordArray(v[key], (path || \"$\") + \".\" + key);\n          if (foundInObject) return foundInObject;\n        }\n      }\n\n      return null;\n    }\n\n    function buildPathOptions(v, path) {\n      nodesByPath[path] = v;\n\n      // 路径选择只展示可作为根路径的字段路径。\n      // 数组本身可以选中，例如 $.list；但不要继续展开 $.list[0] / $.list[1]。\n      if (Array.isArray(v)) {\n        return;\n      }\n\n      if (isObj(v)) {\n        Object.keys(v).forEach(function (key) {\n          var child = v[key];\n          if (child && typeof child === \"object\") {\n            buildPathOptions(child, path + \".\" + key);\n          }\n        });\n      }\n    }\n\n    function refreshPathSelect() {\n      var paths = Object.keys(nodesByPath);\n      var html = \"\";\n\n      paths.forEach(function (path) {\n        var node = nodesByPath[path];\n        var selected = path === selectedPath ? \" selected\" : \"\";\n        html += '<option value=\"' + esc(path) + '\" title=\"' + esc(summarize(node)) + '\"' + selected + '>' + esc(path) + '<\/option>';\n      });\n\n      pathSelect.innerHTML = html;\n    }\n\n    function setRootPath(path) {\n      if (!Object.prototype.hasOwnProperty.call(nodesByPath, path)) return;\n\n      selectedPath = path;\n      pathSelect.value = path;\n      addRecentPath(path);\n      currentAllColumns = [];\n      currentColumns = [];\n      currentRows = [];\n      expandedDetailPaths = {};\n      columnFilters = {};\n      sortState = { col: null, dir: null };\n      activeFilterColumn = null;\n      treeMenuOpen = false;\n      globalSearch.value = \"\";\n      render({ preserveDetails: false });\n    }\n\n    function getPathCrumbs(path) {\n      var crumbs = [{ label: \"$\", path: \"$\" }];\n      if (!path || path === \"$\") return crumbs;\n\n      var current = \"$\";\n      path.slice(2).split(\".\").forEach(function (part) {\n        current += \".\" + part;\n        crumbs.push({ label: part, path: current });\n      });\n\n      return crumbs;\n    }\n\n    function renderMetaPath(path) {\n      return '<span class=\"meta-path\">' + getPathCrumbs(path).map(function (crumb, index) {\n        var sep = index === 0 ? \"\" : '<span class=\"meta-path-sep\">.<\/span>';\n        var disabled = Object.prototype.hasOwnProperty.call(nodesByPath, crumb.path) ? \"\" : \" disabled\";\n        return sep + '<button class=\"meta-path-btn\" data-path=\"' + esc(crumb.path) + '\"' + disabled + '>' + esc(crumb.label) + '<\/button>';\n      }).join(\"\") + '<\/span>';\n    }\n\n    function parentPath(path) {\n      if (!path || path === \"$\" || path.indexOf(\".\") < 0) return \"$\";\n      return path.slice(0, path.lastIndexOf(\".\"));\n    }\n\n    function addRecentPath(path) {\n      recentPaths = [path].concat(recentPaths.filter(function (item) {\n        return item !== path;\n      })).slice(0, 6);\n      savePersistedState();\n    }\n\n    function toggleFavoritePath(path) {\n      if (favoritePaths[path]) {\n        delete favoritePaths[path];\n      } else {\n        favoritePaths[path] = true;\n      }\n      savePersistedState();\n      updateSettingsPanel();\n    }\n\n    function setMeta(html) {\n      meta.innerHTML = html;\n      Array.prototype.forEach.call(meta.querySelectorAll(\".meta-path-btn\"), function (btn) {\n        btn.onclick = function (event) {\n          event.stopPropagation();\n          setRootPath(btn.getAttribute(\"data-path\"));\n        };\n      });\n    }\n\n    function isIndexContextPath(path) {\n      return /\\[\\d+\\]$/.test(path || \"\");\n    }\n\n    function getContextName(path) {\n      if (!path || path === \"$\") return \"$\";\n\n      var base = String(path).replace(/(\\[\\d+\\])+$/g, \"\");\n      var keyMatch = base.match(/\\.([^\\.\\[]+)$/);\n      if (keyMatch) return keyMatch[1];\n\n      var indexMatch = String(path).match(/(\\[\\d+\\])$/);\n      return indexMatch ? indexMatch[1] : path;\n    }\n\n    function hideStickyTableHead() {\n      stickyTableHeadKey = \"\";\n      stickyTableHead.classList.remove(\"active\");\n      stickyTableHead.classList.remove(\"multi\");\n      stickyTableHeadInner.innerHTML = \"\";\n      stickyTableHeadInner.style.marginLeft = \"0px\";\n      stickyTableHeadInner.style.width = \"auto\";\n      stickyTableHead.style.left = \"0px\";\n      stickyTableHead.style.top = \"0px\";\n      stickyTableHead.style.width = \"0px\";\n      stickyTableHead.style.height = \"0px\";\n      stickyTableHeadInner.style.height = \"auto\";\n    }\n\n    function hideStickyContextBar() {\n      stickyContextPathValue = \"\";\n      stickyContextBar.classList.remove(\"active\");\n      stickyContextPath.textContent = \"\";\n      stickyContextSummary.textContent = \"\";\n      hideStickyTableHead();\n    }\n\n    function getActiveContextDetails() {\n      var contentRect = content.getBoundingClientRect();\n      var top = getRootHeaderMetrics(contentRect).bottom + 2;\n      var candidates = [];\n\n      Array.prototype.forEach.call(content.querySelectorAll(\"details[data-path][open]\"), function (item) {\n        var body = item.querySelector(\":scope > .detail-body\");\n        if (!body) return;\n\n        var itemRect = item.getBoundingClientRect();\n        if (itemRect.top <= top && itemRect.bottom > top + 8) {\n          candidates.push(item);\n        }\n      });\n\n      if (!candidates.length) return [];\n\n      var namedCandidates = candidates.filter(function (item) {\n        return !isIndexContextPath(item.getAttribute(\"data-path\"));\n      });\n      var pool = namedCandidates.length ? namedCandidates : candidates;\n\n      pool.sort(function (a, b) {\n        return Number(a.getAttribute(\"data-depth\") || 0) - Number(b.getAttribute(\"data-depth\") || 0);\n      });\n      return pool;\n    }\n\n    function findActiveContextDetail() {\n      var items = getActiveContextDetails();\n      return items.length ? items[items.length - 1] : null;\n    }\n\n    function getContextTable(item) {\n      var body = item && item.querySelector(\":scope > .detail-body\");\n      if (!body) return null;\n      return body.querySelector(\"table.grid\");\n    }\n\n    function cloneTableHead(table, tableRect, contentRect) {\n      var head = table && table.tHead;\n      if (!head || !head.rows.length) return \"\";\n\n      var widths = Array.prototype.map.call(head.rows[0].cells, function (cell) {\n        return Math.max(48, Math.round(cell.getBoundingClientRect().width));\n      });\n      var totalWidth = Math.max(Math.round(tableRect.width), widths.reduce(function (sum, width) {\n        return sum + width;\n      }, 0));\n\n      var html = '<table style=\"width:' + totalWidth + 'px\"><colgroup>';\n      widths.forEach(function (width) {\n        html += '<col style=\"width:' + width + 'px\">';\n      });\n      html += '<\/colgroup><thead>' + head.innerHTML + '<\/thead><\/table>';\n      return html;\n    }\n\n    function getRootHeaderMetrics(contentRect) {\n      var rootHead = content.querySelector(\"table.root-grid > thead\");\n      if (!rootHead) return { bottom: contentRect.top, height: 36 };\n\n      var rect = rootHead.getBoundingClientRect();\n      var height = Math.max(28, Math.round(rect.height || 36));\n      if (rect.bottom <= contentRect.top || rect.top > contentRect.top + 4) {\n        return { bottom: contentRect.top, height: height };\n      }\n      return { bottom: rect.bottom, height: height };\n    }\n\n    function tableHeaderSignature(table) {\n      var row = table && table.tHead && table.tHead.rows[0];\n      if (!row) return \"\";\n\n      return Array.prototype.map.call(row.cells, function (cell) {\n        return cell.getAttribute(\"data-col-key\") || cell.textContent.trim();\n      }).join(\"|\");\n    }\n\n    function getStickyHeadMetrics(item, contentRect, minTop) {\n      var table = getContextTable(item);\n      var tableRect = table ? table.getBoundingClientRect() : null;\n      var head = table && table.tHead;\n      var headRect = head ? head.getBoundingClientRect() : null;\n      var headHeight = headRect ? Math.max(28, Math.round(headRect.height || 36)) : 36;\n      if (!tableRect || !headRect || headRect.top > minTop || tableRect.bottom <= minTop + headHeight) return null;\n\n      var left = Math.max(contentRect.left, tableRect.left);\n      var width = Math.min(tableRect.right, contentRect.right) - left;\n      if (width <= 0) return null;\n\n      return { table: table, tableRect: tableRect, height: headHeight, left: left, width: width };\n    }\n\n    function renderStickyHeadLayer(metric, top) {\n      var left = Math.round(metric.left);\n      var width = Math.round(metric.width);\n      var height = Math.round(metric.height);\n      var marginLeft = Math.round(metric.tableRect.left - metric.left);\n      var tableWidth = Math.round(metric.tableRect.width);\n\n      return '<div class=\"sticky-head-layer\" style=\"left:' + left + 'px;top:' + Math.round(top) +\n        'px;width:' + width + 'px;height:' + height + 'px\">' +\n        '<div class=\"sticky-head-layer-inner\" style=\"margin-left:' + marginLeft + 'px;width:' + tableWidth +\n        'px;height:' + height + 'px\">' + cloneTableHead(metric.table, metric.tableRect) + '<\/div><\/div>';\n    }\n\n    function updateSingleStickyTableHead(item) {\n      var contentRect = content.getBoundingClientRect();\n      var rootHeader = getRootHeaderMetrics(contentRect);\n      var metric = getStickyHeadMetrics(item, contentRect, rootHeader.bottom);\n      if (!metric) {\n        hideStickyTableHead();\n        return;\n      }\n\n      var key = (item.getAttribute(\"data-path\") || \"\") + \"::\" + Math.round(metric.tableRect.left) +\n        \"::\" + Math.round(metric.tableRect.width) + \"::\" + content.scrollLeft + \"::single\";\n      if (stickyTableHeadKey !== key) {\n        stickyTableHeadInner.innerHTML = cloneTableHead(metric.table, metric.tableRect);\n        stickyTableHeadKey = key;\n      }\n\n      stickyTableHead.classList.remove(\"multi\");\n      stickyTableHead.style.left = Math.round(metric.left) + \"px\";\n      stickyTableHead.style.top = Math.round(rootHeader.bottom) + \"px\";\n      stickyTableHead.style.width = Math.round(metric.width) + \"px\";\n      stickyTableHead.style.height = Math.round(metric.height) + \"px\";\n      stickyTableHeadInner.style.height = Math.round(metric.height) + \"px\";\n      stickyTableHeadInner.style.marginLeft = Math.round(metric.tableRect.left - metric.left) + \"px\";\n      stickyTableHeadInner.style.width = Math.round(metric.tableRect.width) + \"px\";\n      stickyTableHead.classList.add(\"active\");\n    }\n\n    function updateMultiStickyTableHead() {\n      var contentRect = content.getBoundingClientRect();\n      var rootHeader = getRootHeaderMetrics(contentRect);\n      var items = getActiveContextDetails();\n      var seen = {};\n      var layers = [];\n      var top = rootHeader.bottom;\n\n      items.forEach(function (item) {\n        var metric = getStickyHeadMetrics(item, contentRect, rootHeader.bottom);\n        var signature = metric ? tableHeaderSignature(metric.table) : \"\";\n        if (!metric || !signature || seen[signature]) return;\n\n        seen[signature] = true;\n        if (top + metric.height > contentRect.bottom) return;\n        layers.push(renderStickyHeadLayer(metric, top));\n        top += metric.height + 6;\n      });\n\n      if (!layers.length) {\n        hideStickyTableHead();\n        return;\n      }\n\n      var key = layers.join(\"\") + \"::multi\";\n      if (stickyTableHeadKey !== key) {\n        stickyTableHeadInner.innerHTML = layers.join(\"\");\n        stickyTableHeadKey = key;\n      }\n\n      stickyTableHead.classList.add(\"multi\");\n      stickyTableHead.style.left = \"0px\";\n      stickyTableHead.style.top = \"0px\";\n      stickyTableHead.style.width = \"100vw\";\n      stickyTableHead.style.height = \"100vh\";\n      stickyTableHeadInner.style.marginLeft = \"0px\";\n      stickyTableHeadInner.style.width = \"100vw\";\n      stickyTableHeadInner.style.height = \"100vh\";\n      stickyTableHead.classList.add(\"active\");\n    }\n\n    function updateStickyTableHead(item) {\n      if (stickyHeaderMode === \"multi\") {\n        updateMultiStickyTableHead();\n        return;\n      }\n\n      updateSingleStickyTableHead(item);\n    }\n\n    function updateStickyOffsets() {\n      var rootHead = content.querySelector(\"table.root-grid > thead\");\n      var height = rootHead ? Math.max(28, Math.round(rootHead.getBoundingClientRect().height || 36)) : 36;\n      content.style.setProperty(\"--root-head-height\", height + \"px\");\n    }\n\n    function updateStickyContextBar() {\n      stickyContextTicking = false;\n      if (!showTable) {\n        hideStickyContextBar();\n        return;\n      }\n\n      if (!showStickyHeader) {\n        hideStickyContextBar();\n        return;\n      }\n\n      var item = findActiveContextDetail();\n      if (!item) {\n        hideStickyContextBar();\n        return;\n      }\n\n      var path = item.getAttribute(\"data-path\") || \"\";\n      var summary = item.getAttribute(\"data-context-summary\") || \"\";\n      stickyContextPathValue = path;\n      stickyContextPath.textContent = getContextName(path);\n      stickyContextPath.title = path;\n      stickyContextSummary.textContent = summary ? \"· \" + summary : \"\";\n      stickyContextBar.title = path;\n      stickyContextBar.classList.add(\"active\");\n      updateStickyTableHead(item);\n    }\n\n    function requestStickyContextUpdate() {\n      if (stickyContextTicking) return;\n      stickyContextTicking = true;\n      requestAnimationFrame(updateStickyContextBar);\n    }\n\n    function bindStickyContextEvents() {\n      content.onscroll = requestStickyContextUpdate;\n      stickyContextJump.onclick = function () {\n        if (!stickyContextPathValue) return;\n\n        var target = null;\n        Array.prototype.some.call(content.querySelectorAll(\"details[data-path]\"), function (item) {\n          if (item.getAttribute(\"data-path\") === stickyContextPathValue) {\n            target = item;\n            return true;\n          }\n          return false;\n        });\n\n        if (!target) return;\n        var summary = target.querySelector(\":scope > summary\");\n        (summary || target).scrollIntoView({ block: \"start\" });\n      };\n    }\n\n    function getNodeAtPath(path) {\n      if (!path || path === \"$\") return json;\n\n      var node = json;\n      var re = /\\.([^\\.\\[]+)|\\[(\\d+)\\]/g;\n      var match;\n      while ((match = re.exec(path)) && node !== undefined && node !== null) {\n        node = match[1] !== undefined ? node[match[1]] : node[Number(match[2])];\n      }\n      return node;\n    }\n\n    function gridClass(tableId) {\n      return \"grid \" + (tableId === tablePath ? \"root-grid\" : \"nested-grid\");\n    }\n\n    function removeExpandedPathTree(path) {\n      Object.keys(expandedDetailPaths).forEach(function (key) {\n        if (key === path || key.indexOf(path + \".\") === 0 || key.indexOf(path + \"[\") === 0) {\n          delete expandedDetailPaths[key];\n        }\n      });\n    }\n\n    function addExpandablePaths(v, path) {\n      if (!hasExpandableValue(v)) return;\n      expandedDetailPaths[path] = true;\n\n      var parsedStringJson = tryParseJsonStringValue(v);\n      if (parsedStringJson) {\n        addExpandablePaths(parsedStringJson, path);\n        return;\n      }\n\n      if (Array.isArray(v)) {\n        v.forEach(function (item, index) {\n          if (hasExpandableValue(item)) addExpandablePaths(item, path + \"[\" + index + \"]\");\n        });\n        return;\n      }\n\n      if (isObj(v)) {\n        Object.keys(v).forEach(function (key) {\n          var child = v[key];\n          if (hasExpandableValue(child)) addExpandablePaths(child, path + \".\" + key);\n        });\n      }\n    }\n\n    function collectSearchExpandedPaths(v, path, q) {\n      var matched = valueText(v).toLowerCase().indexOf(q) >= 0;\n\n      var parsedStringJson = tryParseJsonStringValue(v);\n      if (parsedStringJson) {\n        var parsedMatched = collectSearchExpandedPaths(parsedStringJson, path, q);\n        if (parsedMatched) expandedDetailPaths[path] = true;\n        return matched || parsedMatched;\n      }\n\n      if (Array.isArray(v)) {\n        v.forEach(function (item, index) {\n          var childPath = path + \"[\" + index + \"]\";\n          var childMatched = collectSearchExpandedPaths(item, childPath, q);\n          if (childMatched && hasExpandableValue(item)) expandedDetailPaths[childPath] = true;\n          matched = matched || childMatched;\n        });\n        return matched;\n      }\n\n      if (isObj(v)) {\n        Object.keys(v).forEach(function (key) {\n          var child = v[key];\n          var childPath = path + \".\" + key;\n          var keyMatched = String(key).toLowerCase().indexOf(q) >= 0;\n          var childMatched = collectSearchExpandedPaths(child, childPath, q);\n          if ((keyMatched || childMatched) && hasExpandableValue(child)) expandedDetailPaths[childPath] = true;\n          matched = matched || keyMatched || childMatched;\n        });\n      }\n\n      return matched;\n    }\n\n    function applySearchExpansion() {\n      var q = globalSearch.value.trim().toLowerCase();\n      if (!q) return;\n      expandedDetailPaths = {};\n      collectSearchExpandedPaths(nodesByPath[selectedPath], selectedPath, q);\n    }\n\n    function getPathDepth(path) {\n      if (!path || path === \"$\") return 0;\n      var normalized = path.replace(/\\[[^\\]]+\\]/g, \".[]\");\n      return normalized.split(\".\").length - 1;\n    }\n\n    function syncExpandedDetailPaths() {\n      Array.prototype.forEach.call(content.querySelectorAll(\"details[data-path]\"), function (item) {\n        var path = item.getAttribute(\"data-path\");\n        if (!path) return;\n        if (item.open) {\n          expandedDetailPaths[path] = true;\n        } else {\n          delete expandedDetailPaths[path];\n        }\n      });\n    }\n\n    function restoreExpandedDetails() {\n      Array.prototype.forEach.call(content.querySelectorAll(\"details[data-path]\"), function (item) {\n        var path = item.getAttribute(\"data-path\");\n        item.open = !!expandedDetailPaths[path];\n      });\n    }\n\n    function bindDetailsToggleEvents() {\n      Array.prototype.forEach.call(content.querySelectorAll(\"details[data-path]\"), function (item) {\n        item.ontoggle = function () {\n          if (suppressDetailToggle) return;\n\n          var path = item.getAttribute(\"data-path\");\n          if (!path) return;\n\n          if (item.open) {\n            expandedDetailPaths[path] = true;\n            if (!item.querySelector(\":scope > .detail-body\")) {\n              render();\n            }\n            return;\n          }\n\n          delete expandedDetailPaths[path];\n          var body = item.querySelector(\":scope > .detail-body\");\n          if (body && body.parentNode) body.parentNode.removeChild(body);\n        };\n      });\n    }\n\n    function getTreeColumnIndex(table) {\n      if (activeTreeColumnIndex >= 0) return activeTreeColumnIndex;\n      return table && table.rows && table.rows[0] ? table.rows[0].cells.length - 1 : -1;\n    }\n\n    function getColumnDetails(table, directOnly) {\n      if (!table || !table.tBodies || !table.tBodies.length) return [];\n\n      var details = [];\n      var columnIndex = getTreeColumnIndex(table);\n      Array.prototype.forEach.call(table.tBodies[0].children, function (row) {\n        var cell = row.cells && row.cells[columnIndex];\n        if (!cell) return;\n\n        if (directOnly) {\n          Array.prototype.forEach.call(cell.children, function (child) {\n            if (child.matches && child.matches(\"details[data-depth]\")) details.push(child);\n          });\n        } else {\n          details = details.concat(Array.prototype.slice.call(cell.querySelectorAll(\"details[data-depth]\")));\n        }\n      });\n\n      return details;\n    }\n\n    function getScopedDetails(scope) {\n      var details = getColumnDetails(activeTreeTable, scope === \"current\");\n      if (!details.length && scope !== \"current\") {\n        details = Array.prototype.slice.call(content.querySelectorAll(\"details[data-depth]\"));\n      }\n      return details;\n    }\n\n    function applyDetailsOpen(details, open, scope) {\n      suppressDetailToggle = true;\n      try {\n        details.forEach(function (item) {\n          var path = item.getAttribute(\"data-path\");\n          if (!path) return;\n\n          item.open = open;\n          if (open) {\n            if (scope === \"all\") {\n              addExpandablePaths(getNodeAtPath(path), path);\n            } else {\n              expandedDetailPaths[path] = true;\n            }\n          } else {\n            removeExpandedPathTree(path);\n          }\n        });\n      } finally {\n        setTimeout(function () { suppressDetailToggle = false; }, 0);\n      }\n    }\n\n    function toggleDetailsOpen(scope) {\n      var details = getScopedDetails(scope);\n      var shouldOpen = details.some(function (item) {\n        return !item.open;\n      });\n      applyDetailsOpen(details, shouldOpen, scope);\n      render();\n    }\n\n    function hasExpandableValue(v) {\n      return !!(v && typeof v === \"object\") || !!tryParseJsonStringValue(v);\n    }\n\n    function treeMenuHtml() {\n      return '<div class=\"tree-menu\">' +\n        '<button class=\"tree-action\" data-scope=\"current\">展开/折叠本层<\/button>' +\n        '<button class=\"tree-action\" data-scope=\"all\">展开/折叠全部<\/button>' +\n      '<\/div>';\n    }\n\n    function closeTreeMenu() {\n      treeMenuOpen = false;\n      activeTreeTable = null;\n      activeTreeColumnIndex = -1;\n      Array.prototype.forEach.call(document.querySelectorAll(\".tree-menu\"), function (menu) {\n        if (menu.parentNode) menu.parentNode.removeChild(menu);\n      });\n      Array.prototype.forEach.call(content.querySelectorAll(\".tree-menu-btn\"), function (btn) {\n        btn.setAttribute(\"aria-expanded\", \"false\");\n      });\n    }\n\n    function colWidthStyle(tableId, colKey) {\n      var width = columnWidths[tableId + \"::\" + colKey];\n      return width ? ' style=\"width:' + width + 'px;min-width:' + width + 'px\"' : \"\";\n    }\n\n    function resizeHandleHtml() {\n      return '<span class=\"col-resizer\" title=\"拖拽调整列宽\"><\/span>';\n    }\n\n    function simpleHeader(label, className, tableId, colKey) {\n      return '<th class=\"' + className + '\" data-col-key=\"' + esc(colKey) + '\"' + colWidthStyle(tableId, colKey) + '>' +\n        '<div class=\"th-wrap\"><span class=\"th-left\"><span class=\"th-title-static\">' + esc(label) + '<\/span><\/span><\/div>' +\n        resizeHandleHtml() + '<\/th>';\n    }\n\n    function renderValueHeader(hasTreeActions, tableId) {\n      var html = '<th class=\"value-col\" data-col-key=\"Value\"' + colWidthStyle(tableId, \"Value\") + '>';\n      html += '<div class=\"value-th-wrap\"><span>Value<\/span>';\n      if (hasTreeActions) {\n        html += '<button class=\"tree-menu-btn\" title=\"展开/折叠层级\" aria-expanded=\"false\">⤢<\/button>';\n      }\n      html += '<\/div>' + resizeHandleHtml() + '<\/th>';\n      return html;\n    }\n\n    function filterIconSvg() {\n      return '<svg viewBox=\"0 0 16 16\" aria-hidden=\"true\">' +\n        '<path d=\"M2.2 3h11.6L9.4 8.2v4.1l-2.8 1.5V8.2L2.2 3z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/>' +\n      '<\/svg>';\n    }\n\n    function sortMark(col) {\n      if (sortState.col !== col) return \"\";\n      return '<span class=\"sort-mark\">' + (sortState.dir === \"asc\" ? \"↑\" : \"↓\") + '<\/span>';\n    }\n\n    function bindTreeActionEvents(root) {\n      Array.prototype.forEach.call(root.querySelectorAll(\".tree-menu\"), function (menu) {\n        menu.onclick = function (event) {\n          event.stopPropagation();\n        };\n      });\n\n      Array.prototype.forEach.call(root.querySelectorAll(\".tree-action\"), function (btn) {\n        btn.onclick = function (event) {\n          event.stopPropagation();\n          toggleDetailsOpen(btn.getAttribute(\"data-scope\"));\n          closeTreeMenu();\n        };\n      });\n    }\n\n    function positionTreeMenu(btn) {\n      var menu = document.querySelector(\".tree-menu\");\n      if (!menu) return;\n\n      var rect = btn.getBoundingClientRect();\n      var left = Math.min(rect.left, window.innerWidth - menu.offsetWidth - 8);\n      var top = Math.min(rect.bottom + 6, window.innerHeight - menu.offsetHeight - 8);\n      menu.style.left = Math.max(8, left) + \"px\";\n      menu.style.top = Math.max(8, top) + \"px\";\n    }\n\n    function bindTreeMenuEvents() {\n      Array.prototype.forEach.call(content.querySelectorAll(\".tree-menu-btn\"), function (btn) {\n        btn.onclick = function (event) {\n          event.stopPropagation();\n\n          if (treeMenuOpen) {\n            closeTreeMenu();\n            return;\n          }\n\n          closeTreeMenu();\n          activeFilterColumn = null;\n          activeTreeTable = btn.closest(\"table.grid\");\n          activeTreeColumnIndex = btn.closest(\"th\").cellIndex;\n          document.body.insertAdjacentHTML(\"beforeend\", treeMenuHtml());\n          treeMenuOpen = true;\n          btn.setAttribute(\"aria-expanded\", \"true\");\n          positionTreeMenu(btn);\n          bindTreeActionEvents(document);\n        };\n      });\n\n      bindTreeActionEvents(document);\n    }\n\n    loadPersistedState();\n    buildPathOptions(json, \"$\");\n    refreshPathSelect();\n\n    function getValueCounts(rows, col) {\n      var counts = {};\n      rows.forEach(function (row) {\n        var text = valueText(row ? row[col] : undefined);\n        counts[text] = (counts[text] || 0) + 1;\n      });\n      return counts;\n    }\n\n    function globalFilterKey(col) {\n      return \"*::\" + String(col);\n    }\n\n    function getColumnFilter(tableId, col) {\n      return columnFilters[filterMenuKey(tableId, col)] || columnFilters[globalFilterKey(col)] || {};\n    }\n\n    function hasColumnFilter(filter) {\n      return !!(filter && ((filter.values && filter.values.length) || filter.mode));\n    }\n\n    function formatFilterLabel(key, filter) {\n      if (key === \"__global_search__\") return \"搜索: \" + globalSearch.value.trim();\n\n      var parts = key.split(\"::\");\n      var scope = parts[0] === \"*\" ? \"全部\" : parts[0];\n      var col = parts.slice(1).join(\"::\");\n      var bits = [];\n      if (filter.values && filter.values.length) bits.push(filter.values.length + \" 个值\");\n      if (filter.mode && filter.mode !== \"all\") bits.push(filter.mode + (filter.query ? \": \" + filter.query : \"\"));\n      return col + \" · \" + bits.join(\" · \") + (scope === \"全部\" ? \" · 全部同名\" : \"\");\n    }\n\n    function renderFilterChips() {\n      var chips = [];\n      var q = globalSearch.value.trim();\n      if (q) chips.push({ key: \"__global_search__\", text: formatFilterLabel(\"__global_search__\", {}) });\n\n      Object.keys(columnFilters).forEach(function (key) {\n        var filter = columnFilters[key];\n        if (hasColumnFilter(filter)) chips.push({ key: key, text: formatFilterLabel(key, filter) });\n      });\n\n      if (!chips.length) {\n        filterChips.classList.remove(\"active\");\n        filterChips.innerHTML = \"\";\n        return;\n      }\n\n      filterChips.classList.add(\"active\");\n      filterChips.innerHTML = chips.map(function (chip) {\n        return '<span class=\"filter-chip\" title=\"' + esc(chip.text) + '\"><span class=\"filter-chip-text\">' +\n          esc(chip.text) + '<\/span><button class=\"filter-chip-remove\" data-filter-key=\"' + esc(chip.key) +\n          '\" title=\"移除过滤条件\">×<\/button><\/span>';\n      }).join(\"\");\n      bindFilterChipEvents();\n    }\n\n    function bindFilterChipEvents() {\n      Array.prototype.forEach.call(filterChips.querySelectorAll(\".filter-chip-remove\"), function (btn) {\n        btn.onclick = function (event) {\n          event.stopPropagation();\n          var key = btn.getAttribute(\"data-filter-key\");\n          if (key === \"__global_search__\") {\n            globalSearch.value = \"\";\n          } else {\n            delete columnFilters[key];\n          }\n          activeFilterColumn = null;\n          render();\n        };\n      });\n    }\n\n    function getActiveFilterCount() {\n      var count = 0;\n\n      Object.keys(columnFilters).forEach(function (key) {\n        if (hasColumnFilter(columnFilters[key])) count++;\n      });\n\n      if (globalSearch.value.trim()) count++;\n      return count;\n    }\n\n    function conditionMatches(filter, text) {\n      var mode = filter.mode || \"all\";\n      var q = String(filter.query || \"\").toLowerCase();\n      var lower = String(text || \"\").toLowerCase();\n\n      if (mode === \"empty\") return text === \"\" || text === \"null\";\n      if (mode === \"notEmpty\") return text !== \"\" && text !== \"null\";\n      if (!q) return true;\n      if (mode === \"contains\") return lower.indexOf(q) >= 0;\n      if (mode === \"notContains\") return lower.indexOf(q) < 0;\n      if (mode === \"equals\") return lower === q;\n      if (mode === \"notEquals\") return lower !== q;\n      return true;\n    }\n\n    function rowMatches(row, cols, tableId) {\n      var global = globalSearch.value.trim().toLowerCase();\n\n      if (global) {\n        var wholeRow = cols.map(function (col) {\n          return valueText(row ? row[col] : undefined);\n        }).join(\" \").toLowerCase();\n\n        if (wholeRow.indexOf(global) < 0) return false;\n      }\n\n      for (var i = 0; i < cols.length; i++) {\n        var col = cols[i];\n        var filter = getColumnFilter(tableId, col);\n        var text = valueText(row ? row[col] : undefined);\n        var lower = text.toLowerCase();\n\n        if (filter.values && filter.values.length && filter.values.indexOf(text) < 0) {\n          return false;\n        }\n\n        if (!conditionMatches(filter, text)) {\n          return false;\n        }\n      }\n\n      return true;\n    }\n\n    function getFilteredRows(rows, cols, tableId) {\n      return rows.filter(function (row) {\n        return rowMatches(row, cols, tableId);\n      });\n    }\n\n    function compareValues(a, b) {\n      var av = valueText(a);\n      var bv = valueText(b);\n      var an = Number(av);\n      var bn = Number(bv);\n\n      if (av !== \"\" && bv !== \"\" && isFinite(an) && isFinite(bn)) {\n        return an === bn ? 0 : an > bn ? 1 : -1;\n      }\n\n      return av.localeCompare(bv, \"zh-Hans\", { numeric: true });\n    }\n\n    function getSortedRows(rows) {\n      if (!sortState.col || !sortState.dir) return rows;\n\n      return rows.slice().sort(function (a, b) {\n        var result = compareValues(a ? a[sortState.col] : undefined, b ? b[sortState.col] : undefined);\n        return sortState.dir === \"asc\" ? result : -result;\n      });\n    }\n\n    function toggleSort(col) {\n      if (sortState.col !== col) {\n        sortState = { col: col, dir: \"asc\" };\n      } else if (sortState.dir === \"asc\") {\n        sortState.dir = \"desc\";\n      } else {\n        sortState = { col: null, dir: null };\n      }\n\n      render();\n    }\n\n\n    function expandSearchMatches() {\n      // 展开路径已在渲染前根据原始 JSON 计算；这里保留函数名避免调用链分散。\n    }\n\n    function getDisplayNodeAtPath(path) {\n      if (Object.prototype.hasOwnProperty.call(renderedNodesByPath, path)) return renderedNodesByPath[path];\n      var node = getNodeAtPath(path);\n      return tryParseJsonStringValue(node) || node;\n    }\n\n    function renderNodeActions(path) {\n      return '<span class=\"node-actions\">' +\n        '<button class=\"node-action\" data-node-action=\"copy-json\" data-path=\"' + esc(path) + '\" title=\"复制当前 JSON\">JSON<\/button>' +\n        '<\/span>';\n    }\n\n    function bindNodeActionEvents() {\n      Array.prototype.forEach.call(content.querySelectorAll(\".node-action\"), function (btn) {\n        btn.onclick = function (event) {\n          event.preventDefault();\n          event.stopPropagation();\n          var path = btn.getAttribute(\"data-path\");\n          copyText(JSON.stringify(getDisplayNodeAtPath(path), null, 2));\n        };\n      });\n    }\n\n    function renderValue(v, path) {\n      if (v === undefined) return '<span class=\"muted\"><\/span>';\n      if (v === null) return '<span class=\"muted\">' + highlightText(\"null\") + '<\/span>';\n      if (typeof v === \"string\") {\n        var parsedStringJson = tryParseJsonStringValue(v);\n        if (!parsedStringJson) return highlightText(v);\n        return renderExpandableValue(parsedStringJson, path, \"\", true);\n      }\n      if (typeof v === \"number\") return '<span class=\"number-value\">' + highlightText(v) + '<\/span>';\n      if (typeof v === \"boolean\") return highlightText(v);\n\n      return renderExpandableValue(v, path, \"\", false);\n    }\n\n    function renderExpandableValue(v, path, prefix, parsedString) {\n      var pathKey = path || \"$\";\n      var depth = getPathDepth(pathKey);\n      var summary = (prefix || \"\") + summarize(v);\n      var badge = parsedString ? '<span class=\"json-string-badge\">parsed<\/span>' : \"\";\n      var expanded = !!expandedDetailPaths[pathKey];\n      var body = expanded ? '<div class=\"detail-body\">' + renderNode(v, pathKey) + '<\/div>' : \"\";\n\n      return '<details data-path=\"' + esc(pathKey) + '\" data-depth=\"' + depth + '\" data-context-summary=\"' +\n        esc(summary) + '\"' + (expanded ? ' open' : '') + '>' +\n        '<summary><span class=\"summary-main\">' + badge + esc(summary) + '<\/span>' + renderNodeActions(pathKey) + '<\/summary>' +\n        body +\n        '<\/details>';\n    }\n\n    function renderKeyCell(key, childPath) {\n      if (!Object.prototype.hasOwnProperty.call(nodesByPath, childPath)) {\n        return highlightText(key);\n      }\n\n      return '<button class=\"key-jump\" data-path=\"' + esc(childPath) + '\" title=\"切换根路径到 ' +\n        esc(childPath) + '\">↪ ' + highlightText(key) + '<\/button>';\n    }\n\n    function renderObject(obj, path) {\n      var keys = Object.keys(obj);\n      if (!keys.length) return '<div class=\"empty\">{}<\/div>';\n\n      var tableId = path || \"$\";\n      var hasTreeActions = keys.some(function (key) {\n        return hasExpandableValue(obj[key]);\n      });\n\n      var html = '<table class=\"' + gridClass(tableId) + '\" data-table-id=\"' + esc(tableId) + '\"><thead><tr>' +\n        simpleHeader(\"Key\", \"key-col\", tableId, \"Key\") +\n        (showTypeColumn ? simpleHeader(\"Type\", \"type-col\", tableId, \"Type\") : \"\") +\n        renderValueHeader(hasTreeActions, tableId) + '<\/tr><\/thead><tbody>';\n\n      keys.forEach(function (key) {\n        var value = obj[key];\n        var childPath = (path || \"$\") + \".\" + key;\n\n        html += '<tr data-row-path=\"' + esc(childPath) + '\">';\n        html += '<td class=\"key-col\" data-copy=\"' + esc(key) + '\">' + renderKeyCell(key, childPath) + '<\/td>';\n        if (showTypeColumn) {\n          var typeName = typeOf(value);\n          html += '<td class=\"type type-col' + (typeName === \"number\" ? \" type-number\" : \"\") + '\" data-copy=\"' + esc(typeName) + '\">' + esc(typeName) + '<\/td>';\n        }\n        html += '<td class=\"value-col\" data-copy=\"' + esc(valueText(value)) + '\">' + renderValue(value, childPath) + '<\/td>';\n        html += '<\/tr>';\n      });\n\n      html += '<\/tbody><\/table>';\n      return html;\n    }\n\n    function filterMenuKey(tableId, col) {\n      return String(tableId || tablePath) + \"::\" + String(col);\n    }\n\n    function findFilterButtonByKey(menuKey) {\n      var found = null;\n      Array.prototype.some.call(content.querySelectorAll(\".filter-btn\"), function (btn) {\n        if (btn.getAttribute(\"data-filter-key\") === menuKey) {\n          found = btn;\n          return true;\n        }\n        return false;\n      });\n      return found;\n    }\n\n    function positionFilterMenu() {\n      if (!activeFilterColumn) return;\n\n      var menu = content.querySelector(\".filter-menu\");\n      var btn = findFilterButtonByKey(activeFilterColumn);\n      if (!menu || !btn) return;\n\n      var rect = btn.getBoundingClientRect();\n      var width = Math.max(260, menu.offsetWidth || 260);\n      var height = Math.max(120, menu.offsetHeight || 320);\n      var left = Math.min(rect.left, window.innerWidth - width - 8);\n      var top = rect.bottom + 6;\n\n      if (top + height > window.innerHeight - 8) {\n        top = rect.top - height - 6;\n      }\n\n      menu.style.left = Math.max(8, Math.round(left)) + \"px\";\n      menu.style.top = Math.max(8, Math.round(top)) + \"px\";\n      menu.style.visibility = \"visible\";\n    }\n\n    function renderFilterMenu(col, rows, tableId) {\n      var menuKey = filterMenuKey(tableId, col);\n      if (activeFilterColumn !== menuKey) return \"\";\n\n      var counts = getValueCounts(rows, col);\n      var values = Object.keys(counts).sort();\n      var filter = getColumnFilter(tableId, col);\n      var scopedKey = filterMenuKey(tableId, col);\n      var globalKey = globalFilterKey(col);\n      var applyAllChecked = !!columnFilters[globalKey] && !columnFilters[scopedKey];\n      var selectedMap = null;\n\n      if (filter.values && filter.values.length) {\n        selectedMap = {};\n        filter.values.forEach(function (v) {\n          selectedMap[v] = true;\n        });\n      }\n\n      var html = '<div class=\"filter-menu\" data-menu-col=\"' + esc(col) + '\" data-table-id=\"' +\n        esc(tableId || tablePath) + '\" data-menu-key=\"' + esc(scopedKey) + '\">';\n      html += '<input type=\"text\" class=\"menu-search\" data-col=\"' + esc(col) + '\" value=\"\" placeholder=\"搜索过滤项\">';\n      html += '<div class=\"filter-condition\">';\n      html += '<select class=\"condition-mode\" data-col=\"' + esc(col) + '\">';\n      html += '<option value=\"all\"' + ((!filter.mode || filter.mode === \"all\") ? \" selected\" : \"\") + '>条件：全部<\/option>';\n      html += '<option value=\"contains\"' + (filter.mode === \"contains\" ? \" selected\" : \"\") + '>包含<\/option>';\n      html += '<option value=\"notContains\"' + (filter.mode === \"notContains\" ? \" selected\" : \"\") + '>不包含<\/option>';\n      html += '<option value=\"equals\"' + (filter.mode === \"equals\" ? \" selected\" : \"\") + '>等于<\/option>';\n      html += '<option value=\"notEquals\"' + (filter.mode === \"notEquals\" ? \" selected\" : \"\") + '>不等于<\/option>';\n      html += '<option value=\"empty\"' + (filter.mode === \"empty\" ? \" selected\" : \"\") + '>空值<\/option>';\n      html += '<option value=\"notEmpty\"' + (filter.mode === \"notEmpty\" ? \" selected\" : \"\") + '>非空<\/option>';\n      html += '<\/select>';\n      html += '<input type=\"text\" class=\"condition-value\" data-col=\"' + esc(col) + '\" value=\"' + esc(filter.query || \"\") + '\" placeholder=\"条件值\">';\n      html += '<\/div>';\n      html += '<label class=\"setting-row\" style=\"padding:4px 2px\"><input class=\"apply-all-filter\" type=\"checkbox\"' +\n        (applyAllChecked ? ' checked' : '') + '> <span>应用到所有同名字段<\/span><\/label>';\n      html += '<div class=\"filter-actions\">';\n      html += '<button class=\"select-all\" data-col=\"' + esc(col) + '\">全选<\/button>';\n      html += '<button class=\"select-none\" data-col=\"' + esc(col) + '\">清空<\/button>';\n      html += '<\/div>';\n      html += '<div class=\"value-list\">';\n\n      values.forEach(function (value) {\n        var checked = !selectedMap || selectedMap[value] ? \" checked\" : \"\";\n\n        html += '<label class=\"check-row\" data-filter-text=\"' + esc(String(value).toLowerCase()) + '\">';\n        html += '<input type=\"checkbox\" class=\"value-check\" data-col=\"' + esc(col) + '\" value=\"' + esc(value) + '\"' + checked + '>';\n        html += '<span class=\"check-label\" title=\"' + esc(value) + '\">' + esc(value || \"(空)\") + '<\/span>';\n        html += '<span class=\"check-count\">' + counts[value] + '<\/span>';\n        html += '<\/label>';\n      });\n\n      html += '<\/div>';\n      html += '<div class=\"filter-actions\">';\n      html += '<button class=\"apply-filter\" data-col=\"' + esc(col) + '\">应用<\/button>';\n      html += '<button class=\"cancel-filter\" data-col=\"' + esc(col) + '\">取消<\/button>';\n      html += '<\/div>';\n      html += '<\/div>';\n\n      return html;\n    }\n\n    function renderHeader(col, rows, tableId) {\n      var filter = getColumnFilter(tableId, col);\n      var active = hasColumnFilter(filter);\n      var hasTreeActions = rows.some(function (row) {\n        return hasExpandableValue(row ? row[col] : undefined);\n      });\n      var html = \"\";\n\n      html += '<th data-col-key=\"' + esc(col) + '\"' + colWidthStyle(tableId, col) + '>';\n      html += '<div class=\"th-wrap\">';\n      html += '<span class=\"th-left\">';\n      html += '<button class=\"th-title\" data-col=\"' + esc(col) + '\" title=\"点击排序\">' + esc(col) + '<\/button>';\n      html += sortMark(col);\n      html += '<button class=\"filter-btn' + (active ? \" active\" : \"\") + '\" data-col=\"' + esc(col) + '\" data-filter-key=\"' +\n        esc(filterMenuKey(tableId, col)) + '\" title=\"过滤\">' + filterIconSvg() + '<\/button>';\n      if (hasTreeActions) {\n        html += '<button class=\"tree-menu-btn\" title=\"展开/折叠本列层级\" aria-expanded=\"false\">⤢<\/button>';\n      }\n      html += '<\/span>';\n      html += renderFilterMenu(col, rows, tableId);\n      html += '<\/div>';\n      html += resizeHandleHtml();\n      html += '<\/th>';\n\n      return html;\n    }\n\n    function copyText(text) {\n      if (navigator.clipboard && navigator.clipboard.writeText) {\n        navigator.clipboard.writeText(text).then(function () {\n          showToast(\"已复制\");\n        }).catch(function () {\n          fallbackCopy(text);\n        });\n      } else {\n        fallbackCopy(text);\n      }\n    }\n\n    function fallbackCopy(text) {\n      var ta = document.createElement(\"textarea\");\n      ta.value = text;\n      ta.style.position = \"fixed\";\n      ta.style.left = \"-9999px\";\n      document.body.appendChild(ta);\n      ta.select();\n      try { document.execCommand(\"copy\"); } catch (e) {}\n      document.body.removeChild(ta);\n      showToast(\"已复制\");\n    }\n\n    function showToast(text) {\n      var old = document.querySelector(\".toast\");\n      if (old && old.parentNode) old.parentNode.removeChild(old);\n      var div = document.createElement(\"div\");\n      div.className = \"toast\";\n      div.textContent = text;\n      document.body.appendChild(div);\n      setTimeout(function () {\n        if (div.parentNode) div.parentNode.removeChild(div);\n      }, 1200);\n    }\n\n    function downloadFile(name, text, type) {\n      var blob = new Blob([text], { type: type || \"text/plain\" });\n      var a = document.createElement(\"a\");\n      a.href = URL.createObjectURL(blob);\n      a.download = name;\n      document.body.appendChild(a);\n      a.click();\n      document.body.removeChild(a);\n      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);\n    }\n\n    function csvEscape(value) {\n      var text = valueText(value);\n      return '\"' + text.replace(/\"/g, '\"\"') + '\"';\n    }\n\n    function rowsToCsv(rows, cols) {\n      var lines = [cols.map(csvEscape).join(\",\")];\n      rows.forEach(function (row) {\n        lines.push(cols.map(function (col) {\n          return csvEscape(row ? row[col] : undefined);\n        }).join(\",\"));\n      });\n      return lines.join(\"\\\\n\");\n    }\n\n    function getExportRows() {\n      if (currentRows && currentRows.length) return currentRows;\n      var node = nodesByPath[selectedPath];\n      return Array.isArray(node) ? node : [node];\n    }\n\n    function updateSettingsPanel() {\n      showTypeCheck.checked = showTypeColumn;\n      freezeHeaderCheck.checked = freezeHeader;\n      showStickyHeaderCheck.checked = showStickyHeader;\n      parseJsonStringCheck.checked = parseJsonString;\n      headerModeSelect.value = stickyHeaderMode;\n      favPathBtn.textContent = favoritePaths[selectedPath] ? \"取消收藏当前路径\" : \"收藏当前路径\";\n      renderColumnSettingsPanel();\n      renderPathShortcuts();\n    }\n\n    function renderColumnSettingsPanel() {\n      if (!currentAllColumns.length) {\n        columnSettings.innerHTML = '<div class=\"muted\" style=\"padding:6px 8px\">当前不是对象数组表格<\/div>';\n        return;\n      }\n\n      var hidden = getHiddenColumns(tablePath);\n      columnSettings.innerHTML = currentAllColumns.map(function (col) {\n        var checked = hidden[col] ? \"\" : \" checked\";\n        return '<label class=\"setting-row\"><input class=\"column-check\" type=\"checkbox\" data-col=\"' + esc(col) + '\"' + checked + '><span>' + esc(col) + '<\/span><\/label>';\n      }).join(\"\");\n    }\n\n    function renderPathShortcuts() {\n      var paths = Object.keys(favoritePaths).concat(recentPaths).filter(function (path, index, arr) {\n        return path && arr.indexOf(path) === index;\n      });\n      if (!paths.length) {\n        pathShortcuts.innerHTML = '<div class=\"muted\" style=\"padding:6px 8px\">暂无路径<\/div>';\n        return;\n      }\n      pathShortcuts.innerHTML = paths.map(function (path) {\n        var star = favoritePaths[path] ? \"★ \" : \"\";\n        return '<button class=\"path-chip path-shortcut\" data-path=\"' + esc(path) + '\" title=\"' + esc(path) + '\">' + star + esc(path) + '<\/button>';\n      }).join(\"\");\n    }\n\n    function bindSettingsPanelEvents() {\n      Array.prototype.forEach.call(settingsMenu.querySelectorAll(\".column-check\"), function (input) {\n        input.onchange = function () {\n          setColumnVisible(tablePath, input.getAttribute(\"data-col\"), input.checked);\n        };\n      });\n\n      Array.prototype.forEach.call(settingsMenu.querySelectorAll(\".path-shortcut\"), function (btn) {\n        btn.onclick = function (event) {\n          event.preventDefault();\n          setRootPath(btn.getAttribute(\"data-path\"));\n          settingsMenu.hidden = true;\n        };\n      });\n    }\n\n    function bindCopyEvents() {\n      Array.prototype.forEach.call(content.querySelectorAll(\"td\"), function (cell) {\n        cell.ondblclick = function (event) {\n          event.stopPropagation();\n          var value = cell.getAttribute(\"data-copy\");\n          copyText(value !== null ? value : (cell.innerText || cell.textContent || \"\"));\n        };\n        cell.title = cell.title || \"双击复制单元格值\";\n      });\n    }\n\n    function bindFilterEvents() {\n      Array.prototype.forEach.call(content.querySelectorAll(\".key-jump\"), function (btn) {\n        btn.onclick = function (event) {\n          event.stopPropagation();\n          var path = btn.getAttribute(\"data-path\");\n          if (!Object.prototype.hasOwnProperty.call(nodesByPath, path)) return;\n\n          setRootPath(path);\n        };\n      });\n\n      Array.prototype.forEach.call(content.querySelectorAll(\".th-title\"), function (btn) {\n        btn.onclick = function (event) {\n          event.stopPropagation();\n          closeTreeMenu();\n          activeFilterColumn = null;\n          toggleSort(btn.getAttribute(\"data-col\"));\n        };\n      });\n\n      Array.prototype.forEach.call(content.querySelectorAll(\".filter-btn\"), function (btn) {\n        btn.onclick = function (event) {\n          event.stopPropagation();\n          var col = btn.getAttribute(\"data-col\");\n          var menuKey = btn.getAttribute(\"data-filter-key\") || col;\n          closeTreeMenu();\n          activeFilterColumn = activeFilterColumn === menuKey ? null : menuKey;\n          render();\n        };\n      });\n\n      requestAnimationFrame(positionFilterMenu);\n\n      Array.prototype.forEach.call(content.querySelectorAll(\".filter-menu\"), function (menu) {\n        menu.onclick = function (event) {\n          event.stopPropagation();\n        };\n      });\n\n      function applyMenuSearch(menu) {\n        var input = menu.querySelector(\".menu-search\");\n        var q = input ? input.value.trim().toLowerCase() : \"\";\n\n        Array.prototype.forEach.call(menu.querySelectorAll(\".check-row\"), function (row) {\n          var text = row.getAttribute(\"data-filter-text\") || \"\";\n          row.style.display = !q || text.indexOf(q) >= 0 ? \"flex\" : \"none\";\n        });\n      }\n\n      Array.prototype.forEach.call(content.querySelectorAll(\".menu-search\"), function (input) {\n        input.oninput = function (event) {\n          event.stopPropagation();\n          applyMenuSearch(input.closest(\".filter-menu\"));\n        };\n\n        input.onkeyup = function (event) {\n          event.stopPropagation();\n          applyMenuSearch(input.closest(\".filter-menu\"));\n        };\n\n        input.onclick = function (event) {\n          event.stopPropagation();\n        };\n      });\n\n      Array.prototype.forEach.call(content.querySelectorAll(\".condition-mode, .condition-value\"), function (input) {\n        input.onclick = function (event) { event.stopPropagation(); };\n        input.oninput = function (event) { event.stopPropagation(); };\n      });\n\n      Array.prototype.forEach.call(content.querySelectorAll(\".select-all\"), function (btn) {\n        btn.onclick = function (event) {\n          event.stopPropagation();\n          var menu = btn.closest(\".filter-menu\");\n\n          Array.prototype.forEach.call(menu.querySelectorAll(\".check-row\"), function (row) {\n            if (row.style.display !== \"none\") {\n              var check = row.querySelector(\".value-check\");\n              if (check) check.checked = true;\n            }\n          });\n        };\n      });\n\n      Array.prototype.forEach.call(content.querySelectorAll(\".select-none\"), function (btn) {\n        btn.onclick = function (event) {\n          event.stopPropagation();\n          var menu = btn.closest(\".filter-menu\");\n\n          Array.prototype.forEach.call(menu.querySelectorAll(\".check-row\"), function (row) {\n            if (row.style.display !== \"none\") {\n              var check = row.querySelector(\".value-check\");\n              if (check) check.checked = false;\n            }\n          });\n        };\n      });\n\n      Array.prototype.forEach.call(content.querySelectorAll(\".apply-filter\"), function (btn) {\n        btn.onclick = function (event) {\n          event.stopPropagation();\n\n          var col = btn.getAttribute(\"data-col\");\n          var menu = btn.closest(\".filter-menu\");\n          var checks = Array.prototype.slice.call(menu.querySelectorAll(\".value-check\"));\n          var modeInput = menu.querySelector(\".condition-mode\");\n          var queryInput = menu.querySelector(\".condition-value\");\n          var applyAllInput = menu.querySelector(\".apply-all-filter\");\n          var mode = modeInput ? modeInput.value : \"all\";\n          var query = queryInput ? queryInput.value.trim() : \"\";\n          var tableId = menu.getAttribute(\"data-table-id\") || tablePath;\n          var targetKey = applyAllInput && applyAllInput.checked ? globalFilterKey(col) : filterMenuKey(tableId, col);\n          var oppositeKey = applyAllInput && applyAllInput.checked ? filterMenuKey(tableId, col) : globalFilterKey(col);\n          var selected = checks.filter(function (check) {\n            return check.checked;\n          }).map(function (check) {\n            return check.value;\n          });\n\n          var allCount = checks.length;\n\n          columnFilters[targetKey] = columnFilters[targetKey] || {};\n          delete columnFilters[oppositeKey];\n\n          if (selected.length === allCount) {\n            delete columnFilters[targetKey].values;\n          } else {\n            columnFilters[targetKey].values = selected;\n          }\n\n          if (mode && mode !== \"all\") {\n            columnFilters[targetKey].mode = mode;\n            columnFilters[targetKey].query = query;\n          } else {\n            delete columnFilters[targetKey].mode;\n            delete columnFilters[targetKey].query;\n          }\n\n          if (!hasColumnFilter(columnFilters[targetKey])) {\n            delete columnFilters[targetKey];\n          }\n\n          activeFilterColumn = null;\n          render();\n        };\n      });\n\n      Array.prototype.forEach.call(content.querySelectorAll(\".cancel-filter\"), function (btn) {\n        btn.onclick = function (event) {\n          event.stopPropagation();\n          activeFilterColumn = null;\n          render();\n        };\n      });\n    }\n\n    function setColumnWidth(table, index, width) {\n      var tableId = table.getAttribute(\"data-table-id\") || \"$\";\n      var th = table.tHead && table.tHead.rows[0] && table.tHead.rows[0].cells[index];\n      var colKey = th ? th.getAttribute(\"data-col-key\") || String(index) : String(index);\n      columnWidths[tableId + \"::\" + colKey] = width;\n\n      Array.prototype.forEach.call(table.rows, function (row) {\n        var cell = row.cells && row.cells[index];\n        if (!cell) return;\n        cell.style.width = width + \"px\";\n        cell.style.minWidth = width + \"px\";\n      });\n    }\n\n    function bindColumnResizeEvents() {\n      Array.prototype.forEach.call(content.querySelectorAll(\".col-resizer\"), function (handle) {\n        handle.onmousedown = function (event) {\n          event.preventDefault();\n          event.stopPropagation();\n\n          var th = handle.closest(\"th\");\n          var table = handle.closest(\"table.grid\");\n          if (!th || !table) return;\n\n          var index = th.cellIndex;\n          var startX = event.clientX;\n          var startWidth = th.getBoundingClientRect().width;\n          document.body.classList.add(\"resizing-col\");\n\n          function onMove(moveEvent) {\n            var width = Math.max(48, Math.round(startWidth + moveEvent.clientX - startX));\n            setColumnWidth(table, index, width);\n          }\n\n          function onUp() {\n            document.body.classList.remove(\"resizing-col\");\n            document.removeEventListener(\"mousemove\", onMove);\n            document.removeEventListener(\"mouseup\", onUp);\n            savePersistedState();\n          }\n\n          document.addEventListener(\"mousemove\", onMove);\n          document.addEventListener(\"mouseup\", onUp);\n        };\n      });\n    }\n\n    function renderRecordArray(arr, path) {\n      var pathKey = path || tablePath;\n      var isRootTable = pathKey === tablePath;\n      var allCols = collectColumns(arr);\n      var cols = getVisibleColumns(allCols, pathKey);\n      var filtered = getFilteredRows(arr, allCols, pathKey);\n      var sortedRows = getSortedRows(filtered);\n      var visibleRows = sortedRows.slice(0, MAX_RENDER_ROWS);\n      var activeCount = getActiveFilterCount();\n\n      if (isRootTable) {\n        currentAllColumns = allCols;\n        currentColumns = cols;\n        currentRows = sortedRows;\n\n        setMeta(filtered.length + \" / \" + arr.length + \" 行 · \" +\n          cols.length + \" / \" + allCols.length + \" 列 · \" + renderMetaPath(pathKey) +\n          (activeCount ? \" · \" + activeCount + \" 个过滤条件\" : \"\"));\n      }\n\n      if (!arr.length) return '<div class=\"empty\">[]<\/div>';\n\n      var html = \"\";\n      if (isRootTable && sortedRows.length > MAX_RENDER_ROWS) {\n        html += '<div class=\"perf-note\">数据量较大，仅渲染前 ' + MAX_RENDER_ROWS + ' 行；导出仍包含全部筛选结果。<\/div>';\n      }\n\n      html += '<table class=\"' + gridClass(pathKey) + '\" data-table-id=\"' + esc(pathKey) + '\"><thead><tr>';\n      cols.forEach(function (col) {\n        html += renderHeader(col, arr, pathKey);\n      });\n      html += '<\/tr><\/thead><tbody>';\n\n      visibleRows.forEach(function (row) {\n        var rowIndex = arr.indexOf(row);\n        var rowPath = pathKey + '[' + rowIndex + ']';\n        html += '<tr data-row-index=\"' + rowIndex + '\" data-row-path=\"' + esc(rowPath) + '\">';\n        cols.forEach(function (col) {\n          html += '<td data-copy=\"' + esc(valueText(row ? row[col] : undefined)) + '\">' + renderValue(row ? row[col] : undefined, rowPath + '.' + col) + '<\/td>';\n        });\n        html += '<\/tr>';\n      });\n\n      html += '<\/tbody><\/table>';\n\n      if (!filtered.length) {\n        html += '<div class=\"empty\">没有匹配结果<\/div>';\n      }\n\n      return html;\n    }\n\n    function renderArray(arr, path) {\n      if (isRecordArray(arr)) {\n        tableRows = arr;\n        return renderRecordArray(arr, path || \"$\");\n      }\n\n      // var found = findFirstRecordArray(arr, \"$\");\n      // if (found) {\n      //   tableRows = found.rows;\n      //   tablePath = found.path;\n      //   return renderRecordArray(tableRows);\n      // }\n\n      setMeta(arr.length + \" 项 · \" + renderMetaPath(tablePath));\n      if (!arr.length) return '<div class=\"empty\">[]<\/div>';\n\n      var hasTreeActions = arr.some(function (value) {\n        return hasExpandableValue(value);\n      });\n\n      var tableId = path || \"$\";\n      var html = '<table class=\"' + gridClass(tableId) + '\" data-table-id=\"' + esc(tableId) + '\"><thead><tr>' +\n        simpleHeader(\"#\", \"index-col\", tableId, \"#\") +\n        (showTypeColumn ? simpleHeader(\"Type\", \"type-col\", tableId, \"Type\") : \"\") +\n        renderValueHeader(hasTreeActions, tableId) + '<\/tr><\/thead><tbody>';\n\n      arr.forEach(function (value, index) {\n        html += '<tr data-row-path=\"' + esc((path || '$') + '[' + index + ']') + '\">';\n        html += '<td class=\"index-col\" data-copy=\"' + index + '\">' + index + '<\/td>';\n        if (showTypeColumn) {\n          var typeName = typeOf(value);\n          html += '<td class=\"type type-col' + (typeName === \"number\" ? \" type-number\" : \"\") + '\" data-copy=\"' + esc(typeName) + '\">' + esc(typeName) + '<\/td>';\n        }\n        html += '<td class=\"value-col\" data-copy=\"' + esc(valueText(value)) + '\">' + renderValue(value, (path || '$') + '[' + index + ']') + '<\/td>';\n        html += '<\/tr>';\n      });\n\n      html += '<\/tbody><\/table>';\n      return html;\n    }\n\n    function renderNode(v, path) {\n      renderedNodesByPath[path || \"$\"] = v;\n      if (Array.isArray(v)) return renderArray(v, path || \"$\");\n      if (isObj(v)) {\n        // var found = findFirstRecordArray(v, \"$\");\n        // if (found) {\n        //   tableRows = found.rows;\n        //   tablePath = found.path;\n        //   return renderRecordArray(tableRows);\n        // }\n\n        return renderObject(v, path || \"$\");\n      }\n\n      return '<div class=\"empty\">' + esc(String(v)) + '<\/div>';\n    }\n\n    function renderPerformanceNotes() {\n      var notes = [];\n      if (raw.length > LARGE_JSON_CHARS) notes.push(\"响应较大，复杂搜索/展开全部可能较慢\");\n      if (globalSearch.value.trim() && raw.length > LARGE_SEARCH_CHARS) notes.push(\"正在大响应上执行全局搜索，建议缩小关键字\");\n      var failures = Object.keys(parseFailureSamples);\n      if (parseJsonString && failures.length) {\n        notes.push(\"发现 \" + failures.length + \" 类疑似 JSON 字符串解析失败；可在设置中关闭自动解析\");\n      }\n      if (!notes.length) return \"\";\n      return '<div class=\"perf-note\">' + notes.map(esc).join(\"；\") + '<\/div>';\n    }\n\n    function render(options) {\n      var preserveDetails = !options || options.preserveDetails !== false;\n      if (preserveDetails) {\n        syncExpandedDetailPaths();\n      } else {\n        expandedDetailPaths = {};\n      }\n\n      if (showTable) {\n        parseFailureSamples = {};\n        renderedNodesByPath = {};\n        content.classList.toggle(\"freeze-header\", freezeHeader);\n        tableRows = null;\n        if (!Object.prototype.hasOwnProperty.call(nodesByPath, selectedPath)) {\n          selectedPath = \"$\";\n          pathSelect.value = \"$\";\n        }\n        tablePath = selectedPath;\n        currentAllColumns = [];\n        currentColumns = [];\n        currentRows = [];\n        applySearchExpansion();\n        var renderedHtml = renderNode(nodesByPath[selectedPath], selectedPath);\n        content.innerHTML = renderPerformanceNotes() + renderedHtml;\n        restoreExpandedDetails();\n        expandSearchMatches();\n        bindDetailsToggleEvents();\n        bindNodeActionEvents();\n        bindFilterEvents();\n        bindTreeMenuEvents();\n        bindColumnResizeEvents();\n        bindCopyEvents();\n        bindStickyContextEvents();\n        updateStickyOffsets();\n        updateStickyContextBar();\n        updateSettingsPanel();\n        renderFilterChips();\n        bindSettingsPanelEvents();\n\n        if (!tableRows) {\n          setMeta(\"树形表格 · \" + renderMetaPath(tablePath));\n        }\n      } else {\n        meta.textContent = \"原始 JSON\";\n        filterChips.classList.remove(\"active\");\n        filterChips.innerHTML = \"\";\n        content.classList.remove(\"freeze-header\");\n        hideStickyContextBar();\n        content.innerHTML = \"<pre><\/pre>\";\n        content.querySelector(\"pre\").textContent = JSON.stringify(json, null, 2);\n      }\n\n      toggle.textContent = showTable ? \"原始\" : \"表格\";\n      showTypeCheck.checked = showTypeColumn;\n    }\n    \n    pathSelect.onchange = function () {\n      setRootPath(pathSelect.value);\n    };\n\n    globalSearch.oninput = function () {\n      closeTreeMenu();\n      render();\n    };\n\n    resetFilters.onclick = function () {\n      columnFilters = {};\n      activeFilterColumn = null;\n      closeTreeMenu();\n      globalSearch.value = \"\";\n      render();\n    };\n\n    pathUp.onclick = function () {\n      setRootPath(parentPath(selectedPath));\n    };\n\n    copyPathBtn.onclick = function () {\n      copyText(tablePath);\n    };\n\n    copyJsonBtn.onclick = function () {\n      copyText(JSON.stringify(getExportRows(), null, 2));\n    };\n\n    exportJsonBtn.onclick = function () {\n      downloadFile(\"json-table-export.json\", JSON.stringify(getExportRows(), null, 2), \"application/json\");\n    };\n\n    exportCsvBtn.onclick = function () {\n      downloadFile(\"json-table-export.csv\", rowsToCsv(getExportRows(), currentColumns.length ? currentColumns : currentAllColumns), \"text/csv;charset=utf-8\");\n    };\n\n    favPathBtn.onclick = function () {\n      toggleFavoritePath(selectedPath);\n    };\n\n    settingsBtn.onclick = function (event) {\n      event.stopPropagation();\n      activeFilterColumn = null;\n      closeTreeMenu();\n      settingsMenu.hidden = !settingsMenu.hidden;\n      settingsBtn.classList.toggle(\"active\", !settingsMenu.hidden);\n      settingsBtn.setAttribute(\"aria-expanded\", String(!settingsMenu.hidden));\n    };\n\n    showTypeCheck.onchange = function () {\n      showTypeColumn = showTypeCheck.checked;\n      savePersistedState();\n      activeFilterColumn = null;\n      closeTreeMenu();\n      render();\n    };\n\n    freezeHeaderCheck.onchange = function () {\n      freezeHeader = freezeHeaderCheck.checked;\n      savePersistedState();\n      activeFilterColumn = null;\n      closeTreeMenu();\n      render();\n    };\n\n    showStickyHeaderCheck.onchange = function () {\n      showStickyHeader = showStickyHeaderCheck.checked;\n      savePersistedState();\n      activeFilterColumn = null;\n      closeTreeMenu();\n      hideStickyTableHead();\n      updateStickyContextBar();\n    };\n\n    parseJsonStringCheck.onchange = function () {\n      parseJsonString = parseJsonStringCheck.checked;\n      savePersistedState();\n      activeFilterColumn = null;\n      closeTreeMenu();\n      render();\n    };\n\n    headerModeSelect.onchange = function () {\n      stickyHeaderMode = headerModeSelect.value === \"multi\" ? \"multi\" : \"single\";\n      savePersistedState();\n      activeFilterColumn = null;\n      closeTreeMenu();\n      hideStickyTableHead();\n      updateStickyContextBar();\n    };\n\n    toggle.onclick = function () {\n      showTable = !showTable;\n      activeFilterColumn = null;\n      closeTreeMenu();\n      render();\n    };\n\n    document.addEventListener(\"click\", function (event) {\n      var target = event.target;\n      var inTreeLayer = target && target.closest &&\n        (target.closest(\".tree-menu\") || target.closest(\".tree-menu-btn\"));\n      var inFilterLayer = target && target.closest &&\n        (target.closest(\".th-wrap\") || target.closest(\".filter-menu\") || target.closest(\".filter-btn\"));\n      var inSettingsLayer = settingsWrap && settingsWrap.contains(target);\n\n      if (!inSettingsLayer) {\n        settingsMenu.hidden = true;\n        settingsBtn.classList.remove(\"active\");\n        settingsBtn.setAttribute(\"aria-expanded\", \"false\");\n      }\n\n      if (treeMenuOpen && !inTreeLayer) {\n        closeTreeMenu();\n      }\n\n      if (activeFilterColumn && !inFilterLayer) {\n        activeFilterColumn = null;\n        Array.prototype.forEach.call(content.querySelectorAll(\".filter-menu\"), function (menu) {\n          if (menu.parentNode) menu.parentNode.removeChild(menu);\n        });\n      }\n    });\n\n    bindStickyContextEvents();\n    render();\n  });\n<\/script>\n`;\n\npm.visualizer.set(template, { raw });";
+    const sampleJson = "{\n  \"request_id\": \"demo-request-20260806-001\",\n  \"code\": 0,\n  \"message\": \"ok\",\n  \"data\": {\n    \"list\": [\n      {\n        \"project_id\": 1001,\n        \"title\": \"North Star Demo\",\n        \"lifecycle\": \"active\",\n        \"channel\": \"mobile\",\n        \"category\": \"analysis\",\n        \"priority_score\": 98.5,\n        \"enabled\": true,\n        \"owner_display\": \"User A\",\n        \"budget_units\": 120000,\n        \"daily_limit\": 3000,\n        \"labels\": [\n          \"hot\",\n          \"new\",\n          \"mobile\"\n        ],\n        \"settings_json\": \"{\\\"maxItems\\\":2,\\\"routing\\\":{\\\"timeoutMs\\\":1000,\\\"levels\\\":[{\\\"name\\\":\\\"Level 1\\\",\\\"price\\\":45,\\\"weight\\\":70},{\\\"name\\\":\\\"Level 2\\\",\\\"price\\\":30,\\\"weight\\\":30}]},\\\"flags\\\":{\\\"parseJsonString\\\":true,\\\"fallback\\\":false}}\",\n        \"broken_json\": \"{\\\"a\\\":1,\",\n        \"metrics\": {\n          \"views\": 288812,\n          \"actions\": 14722,\n          \"rate\": 0.05097,\n          \"amount\": 9182.45\n        },\n        \"batches\": [\n          {\n            \"batch_code\": \"BATCH-DEMO-01\",\n            \"channel\": \"partner-a\",\n            \"region\": \"east\",\n            \"items\": [\n              {\n                \"item_code\": \"DEMO-30016\",\n                \"item_style\": \"compact\",\n                \"item_type\": 1,\n                \"unit_cost\": 10.48,\n                \"unit_price\": 4500,\n                \"rate\": 0.4292,\n                \"display_price\": \"45.00\",\n                \"terminal_node\": false,\n                \"suppressed\": 0\n              },\n              {\n                \"item_code\": \"DEMO-30016-A\",\n                \"item_style\": \"rich\",\n                \"item_type\": 2,\n                \"unit_cost\": 8.35,\n                \"unit_price\": 3000,\n                \"rate\": 0.3589,\n                \"display_price\": \"30.00\",\n                \"terminal_node\": false,\n                \"suppressed\": 0\n              },\n              {\n                \"item_code\": \"DEMO-1001-LOW\",\n                \"item_style\": \"standard\",\n                \"item_type\": 3,\n                \"unit_cost\": 4.56,\n                \"unit_price\": 1500,\n                \"rate\": 0.329,\n                \"display_price\": \"15.00\",\n                \"terminal_node\": true,\n                \"suppressed\": 1\n              }\n            ]\n          },\n          {\n            \"batch_code\": \"BATCH-DEMO-02\",\n            \"channel\": \"direct\",\n            \"region\": \"south\",\n            \"items\": [\n              {\n                \"item_code\": \"MOBILE-1001\",\n                \"item_style\": \"reward\",\n                \"item_type\": 4,\n                \"unit_cost\": 11.2,\n                \"unit_price\": 5200,\n                \"rate\": 0.442,\n                \"display_price\": \"52.00\",\n                \"terminal_node\": false,\n                \"suppressed\": 0\n              },\n              {\n                \"item_code\": \"MOBILE-EMPTY\",\n                \"item_style\": \"\",\n                \"item_type\": 1,\n                \"unit_cost\": 0,\n                \"unit_price\": 0,\n                \"rate\": 0,\n                \"display_price\": \"0.00\",\n                \"terminal_node\": true,\n                \"suppressed\": 1\n              }\n            ]\n          }\n        ],\n        \"history\": [\n          {\n            \"date\": \"2026-08-01\",\n            \"lifecycle\": \"draft\",\n            \"priority_score\": 82\n          },\n          {\n            \"date\": \"2026-08-05\",\n            \"lifecycle\": \"active\",\n            \"priority_score\": 98.5\n          }\n        ]\n      },\n      {\n        \"project_id\": 1002,\n        \"title\": \"Return Flow Demo\",\n        \"lifecycle\": \"paused\",\n        \"channel\": \"web\",\n        \"category\": \"commerce\",\n        \"priority_score\": 72,\n        \"enabled\": false,\n        \"owner_display\": null,\n        \"budget_units\": 80000,\n        \"daily_limit\": null,\n        \"labels\": [\n          \"return\",\n          \"discount\"\n        ],\n        \"settings_json\": \"[{\\\"slot\\\":\\\"home\\\",\\\"enabled\\\":true,\\\"limit\\\":3},{\\\"slot\\\":\\\"detail\\\",\\\"enabled\\\":false,\\\"limit\\\":1}]\",\n        \"broken_json\": \"not-json\",\n        \"metrics\": {\n          \"views\": 158002,\n          \"actions\": 5001,\n          \"rate\": 0.03165,\n          \"amount\": 2380.18\n        },\n        \"batches\": [\n          {\n            \"batch_code\": \"BATCH-DEMO-03\",\n            \"channel\": \"partner-b\",\n            \"region\": \"north\",\n            \"items\": [\n              {\n                \"item_code\": \"WEB-2002-A\",\n                \"item_style\": \"compact\",\n                \"item_type\": 1,\n                \"unit_cost\": 6.5,\n                \"unit_price\": 2200,\n                \"rate\": 0.295,\n                \"display_price\": \"22.00\",\n                \"terminal_node\": false,\n                \"suppressed\": 0\n              },\n              {\n                \"item_code\": \"WEB-2002-B\",\n                \"item_style\": \"rich\",\n                \"item_type\": 2,\n                \"unit_cost\": 7.9,\n                \"unit_price\": 2600,\n                \"rate\": 0.314,\n                \"display_price\": \"26.00\",\n                \"terminal_node\": true,\n                \"suppressed\": 0\n              }\n            ]\n          }\n        ],\n        \"history\": [\n          {\n            \"date\": \"2026-07-27\",\n            \"lifecycle\": \"active\",\n            \"priority_score\": 80\n          },\n          {\n            \"date\": \"2026-08-03\",\n            \"lifecycle\": \"paused\",\n            \"priority_score\": 72\n          }\n        ]\n      },\n      {\n        \"project_id\": 1003,\n        \"title\": \"Video Layout Demo\",\n        \"lifecycle\": \"active\",\n        \"channel\": \"partner-a\",\n        \"category\": \"finance\",\n        \"priority_score\": 88.25,\n        \"enabled\": true,\n        \"owner_display\": \"User B\",\n        \"budget_units\": 150000,\n        \"daily_limit\": 4500,\n        \"labels\": [],\n        \"settings_json\": \"{\\\"media\\\":{\\\"autoplay\\\":true,\\\"mute\\\":true,\\\"durationSec\\\":15},\\\"experiment\\\":{\\\"group_id\\\":\\\"GROUP-DEMO-20555\\\",\\\"rule_id\\\":12395}}\",\n        \"broken_json\": \"{maxItems:2}\",\n        \"metrics\": {\n          \"views\": 301245,\n          \"actions\": 12066,\n          \"rate\": 0.04005,\n          \"amount\": 7221.01\n        },\n        \"batches\": [\n          {\n            \"batch_code\": \"BATCH-DEMO-04\",\n            \"channel\": \"partner-a\",\n            \"region\": \"west\",\n            \"items\": [\n              {\n                \"item_code\": \"PARTNER-3003-H\",\n                \"item_style\": \"rich\",\n                \"item_type\": 2,\n                \"unit_cost\": 9.8,\n                \"unit_price\": 4100,\n                \"rate\": 0.419,\n                \"display_price\": \"41.00\",\n                \"terminal_node\": false,\n                \"suppressed\": 0\n              },\n              {\n                \"item_code\": \"PARTNER-3003-N\",\n                \"item_style\": \"standard\",\n                \"item_type\": 3,\n                \"unit_cost\": 5.1,\n                \"unit_price\": 1800,\n                \"rate\": 0.352,\n                \"display_price\": \"18.00\",\n                \"terminal_node\": true,\n                \"suppressed\": 0\n              }\n            ]\n          }\n        ],\n        \"history\": [\n          {\n            \"date\": \"2026-08-01\",\n            \"lifecycle\": \"active\",\n            \"priority_score\": 86\n          },\n          {\n            \"date\": \"2026-08-06\",\n            \"lifecycle\": \"active\",\n            \"priority_score\": 88.25\n          }\n        ]\n      },\n      {\n        \"project_id\": 1004,\n        \"title\": \"Empty Value Demo\",\n        \"lifecycle\": \"testing\",\n        \"channel\": \"api\",\n        \"category\": \"education\",\n        \"priority_score\": 0,\n        \"enabled\": true,\n        \"owner_display\": \"\",\n        \"budget_units\": 0,\n        \"daily_limit\": 0,\n        \"labels\": [\n          \"empty\",\n          null,\n          \"api\"\n        ],\n        \"settings_json\": \"{}\",\n        \"broken_json\": \"[1,2,\",\n        \"metrics\": {\n          \"views\": 0,\n          \"actions\": 0,\n          \"rate\": 0,\n          \"amount\": 0\n        },\n        \"batches\": [\n          {\n            \"batch_code\": \"BATCH-EMPTY\",\n            \"channel\": \"api\",\n            \"region\": null,\n            \"items\": [\n              {\n                \"item_code\": \"\",\n                \"item_style\": \"\",\n                \"item_type\": 0,\n                \"unit_cost\": 0,\n                \"unit_price\": 0,\n                \"rate\": 0,\n                \"display_price\": \"\",\n                \"terminal_node\": true,\n                \"suppressed\": 0\n              }\n            ]\n          }\n        ],\n        \"history\": []\n      },\n      {\n        \"project_id\": 1005,\n        \"title\": \"Legacy Mix Demo\",\n        \"lifecycle\": \"archived\",\n        \"channel\": \"mobile\",\n        \"category\": \"news\",\n        \"priority_score\": 63.75,\n        \"enabled\": false,\n        \"owner_display\": \"User C\",\n        \"budget_units\": 64000,\n        \"daily_limit\": 1200,\n        \"labels\": [\n          \"legacy\",\n          \"mobile\",\n          \"low-price\"\n        ],\n        \"settings_json\": \"{\\\"fallbackList\\\":[\\\"DEMO-1001\\\",\\\"DEMO-1005\\\"],\\\"limits\\\":{\\\"min\\\":0,\\\"max\\\":5}}\",\n        \"broken_json\": \"\",\n        \"metrics\": {\n          \"views\": 91002,\n          \"actions\": 1801,\n          \"rate\": 0.01979,\n          \"amount\": 814.3\n        },\n        \"batches\": [\n          {\n            \"batch_code\": \"BATCH-DEMO-05\",\n            \"channel\": \"direct\",\n            \"region\": \"central\",\n            \"items\": [\n              {\n                \"item_code\": \"LEGACY-1005-A\",\n                \"item_style\": \"compact\",\n                \"item_type\": 1,\n                \"unit_cost\": 2.2,\n                \"unit_price\": 900,\n                \"rate\": 0.21,\n                \"display_price\": \"9.00\",\n                \"terminal_node\": false,\n                \"suppressed\": 0\n              },\n              {\n                \"item_code\": \"LEGACY-1005-B\",\n                \"item_style\": \"feed\",\n                \"item_type\": 5,\n                \"unit_cost\": 1.1,\n                \"unit_price\": 300,\n                \"rate\": 0.11,\n                \"display_price\": \"3.00\",\n                \"terminal_node\": true,\n                \"suppressed\": 1\n              }\n            ]\n          }\n        ],\n        \"history\": [\n          {\n            \"date\": \"2026-06-01\",\n            \"lifecycle\": \"active\",\n            \"priority_score\": 75\n          },\n          {\n            \"date\": \"2026-07-01\",\n            \"lifecycle\": \"archived\",\n            \"priority_score\": 63.75\n          }\n        ]\n      }\n    ],\n    \"experiment\": {\n      \"control_ids\": [\n        \"DEMO-30016\",\n        \"DEMO-1001\",\n        \"DEMO-1002\"\n      ],\n      \"assignment\": {\n        \"group_id\": \"GROUP-DEMO-20555\",\n        \"experiment_json\": \"{\\\"rule\\\":{\\\"timeoutPair\\\":\\\"1000,1000\\\",\\\"retry\\\":3,\\\"sampleSize\\\":3000},\\\"weights\\\":{\\\"mobile\\\":\\\"1,1\\\",\\\"web\\\":3},\\\"display\\\":{\\\"maxItems\\\":2,\\\"requestCount\\\":99999,\\\"showCount\\\":999,\\\"mediaShowCount\\\":1}}\",\n        \"rule_id\": 12395\n      },\n      \"segments\": [\n        {\n          \"segment\": \"new_user\",\n          \"channel\": \"mobile\",\n          \"count\": 12001,\n          \"enabled\": true\n        },\n        {\n          \"segment\": \"paid_user\",\n          \"channel\": \"web\",\n          \"count\": 820,\n          \"enabled\": false\n        },\n        {\n          \"segment\": \"silent_user\",\n          \"channel\": \"partner-a\",\n          \"count\": 30016,\n          \"enabled\": true\n        }\n      ]\n    },\n    \"summary_rows\": [\n      {\n        \"path\": \"$.data.list\",\n        \"rows\": 5,\n        \"purpose\": \"默认根路径候选\"\n      },\n      {\n        \"path\": \"$.data.list[0].batches[0].items\",\n        \"rows\": 3,\n        \"purpose\": \"多层 array 嵌套过滤\"\n      },\n      {\n        \"path\": \"$.data.experiment.segments\",\n        \"rows\": 3,\n        \"purpose\": \"短表格排序\"\n      }\n    ],\n    \"meta\": {\n      \"generated_at\": \"2026-08-06T15:00:00+08:00\",\n      \"total\": 5,\n      \"flags\": {\n        \"parseJsonString\": true,\n        \"freezeHeader\": false,\n        \"stickyHeader\": true\n      },\n      \"notes\": \"通用脱敏示例：包含对象数组、嵌套数组、JSON 字符串、坏 JSON、空字符串、null、number、boolean，用于验证过滤/排序/展开/复制。\"\n    }\n  },\n  \"debug\": {\n    \"nullable\": null,\n    \"empty_string\": \"\",\n    \"empty_array\": [],\n    \"empty_object\": {},\n    \"large_number\": 9007199254740991\n  }\n}";
+    const app = document.querySelector('.app');
+    const input = document.getElementById('jsonInput');
+    const preview = document.getElementById('preview');
+    const status = document.getElementById('status');
+    const splitResizer = document.getElementById('splitResizer');
+    const paneToggleBtn = document.getElementById('paneToggleBtn');
+    const STORAGE_KEY = 'json-table-split-input-v3';
+    const SPLIT_KEY = 'json-table-split-left-width-v1';
+    const PANE_COLLAPSED_KEY = 'json-table-split-input-collapsed-v1';
+    const SPLIT_MIN_LEFT = 220;
+    const SPLIT_MIN_RIGHT = 320;
+    const SPLIT_HANDLE_WIDTH = 8;
+    let renderTimer = null;
+    let previewState = null;
+    let previewBridgeId = 0;
+    let previewRestoringUntil = 0;
+    let hasRenderedPreview = false;
+    let pendingPreviewFocus = null;
+    let previewFocusSeq = 0;
+
+    function setStatus(text, type) {
+      status.textContent = text;
+      status.className = 'status' + (type ? ' ' + type : '');
+    }
+
+    function setInputPaneCollapsed(collapsed) {
+      app.classList.toggle('input-collapsed', collapsed);
+      paneToggleBtn.textContent = collapsed ? '显示' : '‹';
+      paneToggleBtn.title = collapsed ? '显示左侧 JSON' : '隐藏左侧 JSON';
+      paneToggleBtn.setAttribute('aria-pressed', String(collapsed));
+      localStorage.setItem(PANE_COLLAPSED_KEY, collapsed ? '1' : '0');
+    }
+
+    function initInputPaneToggle() {
+      const collapsed = localStorage.getItem(PANE_COLLAPSED_KEY) === '1';
+      setInputPaneCollapsed(collapsed);
+      paneToggleBtn.addEventListener('click', () => {
+        setInputPaneCollapsed(!app.classList.contains('input-collapsed'));
+      });
+    }
+
+    function formatBytes(chars) {
+      const bytes = new Blob([chars]).size;
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+    }
+
+    function clampLeftWidth(width) {
+      const max = Math.max(SPLIT_MIN_LEFT, window.innerWidth - SPLIT_MIN_RIGHT - SPLIT_HANDLE_WIDTH);
+      return Math.min(max, Math.max(SPLIT_MIN_LEFT, Math.round(width)));
+    }
+
+    function setLeftWidth(width, shouldPersist = true) {
+      const nextWidth = clampLeftWidth(width);
+      app.style.setProperty('--left-pane-width', nextWidth + 'px');
+      if (shouldPersist) localStorage.setItem(SPLIT_KEY, String(nextWidth));
+    }
+
+    function initSplitWidth() {
+      const saved = Number(localStorage.getItem(SPLIT_KEY));
+      if (Number.isFinite(saved) && saved > 0) {
+        setLeftWidth(saved, false);
+        return;
+      }
+
+      setLeftWidth(window.innerWidth * 0.25, false);
+    }
+
+    function bindSplitResizer() {
+      splitResizer.addEventListener('pointerdown', (event) => {
+        if (event.target === paneToggleBtn || app.classList.contains('input-collapsed')) return;
+        event.preventDefault();
+        document.body.classList.add('resizing-layout');
+        splitResizer.classList.add('active');
+        splitResizer.setPointerCapture(event.pointerId);
+
+        const appRect = app.getBoundingClientRect();
+        const onMove = (moveEvent) => {
+          setLeftWidth(moveEvent.clientX - appRect.left);
+        };
+        const onUp = (upEvent) => {
+          document.body.classList.remove('resizing-layout');
+          splitResizer.classList.remove('active');
+          if (splitResizer.hasPointerCapture(upEvent.pointerId)) {
+            splitResizer.releasePointerCapture(upEvent.pointerId);
+          }
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerup', onUp);
+          window.removeEventListener('pointercancel', onUp);
+        };
+
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+        window.addEventListener('pointercancel', onUp);
+      });
+
+      window.addEventListener('resize', () => {
+        const current = Number(localStorage.getItem(SPLIT_KEY)) || window.innerWidth * 0.25;
+        setLeftWidth(current, Boolean(localStorage.getItem(SPLIT_KEY)));
+      });
+    }
+
+    function errorPreview(message) {
+      hasRenderedPreview = false;
+      previewBridgeId += 1;
+      previewRestoringUntil = 0;
+      preview.srcdoc = '<div class="error-preview"></div>';
+      preview.onload = () => {
+        const el = preview.contentDocument && preview.contentDocument.querySelector('.error-preview');
+        if (el) el.textContent = message;
+      };
+    }
+
+    function pathToSegments(path) {
+      if (!path || path === '$') return [];
+      const segments = [];
+      String(path).replace(/^\$/, '').replace(/\.([^\.\[]+)|\[(\d+)\]/g, (_, key, index) => {
+        segments.push(key !== undefined ? key : Number(index));
+        return '';
+      });
+      return segments;
+    }
+
+    function primitiveJsonText(value) {
+      if (typeof value === 'string') return JSON.stringify(value);
+      if (value === undefined) return '';
+      return JSON.stringify(value);
+    }
+
+    function displayBaseKey(root) {
+      if (root && Object.prototype.hasOwnProperty.call(root, 'DATA')) return 'DATA';
+      if (root && Object.prototype.hasOwnProperty.call(root, 'data')) return 'data';
+      return '';
+    }
+
+    function sourcePathFromDisplayPath(displayPath, root) {
+      const base = displayBaseKey(root);
+      if (!base || !displayPath || displayPath === '$') return base ? '$.' + base : (displayPath || '$');
+      return '$.' + base + displayPath.slice(1);
+    }
+
+    function displayPathFromSourcePath(sourcePath, root) {
+      const base = displayBaseKey(root);
+      const prefix = '$.' + base;
+      if (!base || !sourcePath) return sourcePath || '$';
+      if (sourcePath === prefix) return '$';
+      if (sourcePath.startsWith(prefix + '.')) return '$' + sourcePath.slice(prefix.length);
+      if (sourcePath.startsWith(prefix + '[')) return '$' + sourcePath.slice(prefix.length);
+      return sourcePath;
+    }
+
+    function locateJsonPath(displayPath) {
+      let root;
+      try {
+        root = JSON.parse(input.value);
+      } catch (err) {
+        setStatus('左侧 JSON 无效，无法定位', 'error');
+        return;
+      }
+
+      const sourcePath = sourcePathFromDisplayPath(displayPath, root);
+      const formatted = JSON.stringify(root, null, 2);
+      if (input.value !== formatted) input.value = formatted;
+
+      const location = resolveJsonLocation(root, formatted, sourcePath);
+      if (!location || location.cursor < 0) {
+        setStatus('未能定位：' + sourcePath, 'error');
+        return;
+      }
+
+      setInputPaneCollapsed(false);
+      input.focus();
+      input.setSelectionRange(location.cursor, location.cursor + location.length);
+      input.scrollTop = estimateScrollTop(input, location.cursor);
+      input.classList.remove('locating');
+      requestAnimationFrame(() => input.classList.add('locating'));
+      setStatus('已定位 · ' + sourcePath, 'ok');
+    }
+
+    function resolveJsonLocation(root, formatted, sourcePath) {
+      const segments = pathToSegments(sourcePath);
+      const value = getValueBySegments(root, segments);
+      if (value !== undefined) {
+        const target = primitiveJsonText(value);
+        return { cursor: findJsonCursor(formatted, segments, target), length: target.length };
+      }
+
+      return resolveParsedStringLocation(root, formatted, segments);
+    }
+
+    function resolveParsedStringLocation(root, formatted, segments) {
+      for (let split = segments.length - 1; split > 0; split -= 1) {
+        const prefixSegments = segments.slice(0, split);
+        const rawString = getValueBySegments(root, prefixSegments);
+        if (typeof rawString !== 'string') continue;
+
+        let parsed;
+        try {
+          parsed = JSON.parse(rawString);
+        } catch (err) {
+          continue;
+        }
+
+        const innerSegments = segments.slice(split);
+        const innerValue = getValueBySegments(parsed, innerSegments);
+        if (innerValue === undefined) continue;
+
+        const outerStart = findJsonCursor(formatted, prefixSegments, primitiveJsonText(rawString));
+        const innerTarget = primitiveJsonText(innerValue);
+        const innerStart = findJsonCursor(rawString, innerSegments, innerTarget);
+        if (outerStart < 0 || innerStart < 0) continue;
+
+        const cursor = mapStringIndexToJsonLiteral(rawString, outerStart, innerStart);
+        const length = escapedSliceLength(rawString, innerStart, innerTarget.length);
+        return { cursor, length: Math.max(1, length) };
+      }
+
+      return null;
+    }
+
+    function mapStringIndexToJsonLiteral(rawString, literalStart, innerIndex) {
+      const escapedPrefix = JSON.stringify(rawString.slice(0, innerIndex)).slice(1, -1);
+      return literalStart + 1 + escapedPrefix.length;
+    }
+
+    function escapedSliceLength(rawString, innerStart, rawLength) {
+      return JSON.stringify(rawString.slice(innerStart, innerStart + rawLength)).slice(1, -1).length;
+    }
+
+    function collectJsonPaths(value, path, output, depth = 0) {
+      if (output.length > 5000 || depth > 80) return output;
+      output.push(path);
+      if (Array.isArray(value)) {
+        value.forEach((item, index) => collectJsonPaths(item, path + '[' + index + ']', output, depth + 1));
+        return output;
+      }
+      if (value && typeof value === 'object') {
+        Object.keys(value).forEach((key) => collectJsonPaths(value[key], path + '.' + key, output, depth + 1));
+      }
+      return output;
+    }
+
+    function pathFromInputCursor() {
+      let root;
+      try {
+        root = JSON.parse(input.value);
+      } catch (err) {
+        return '';
+      }
+
+      const formatted = JSON.stringify(root, null, 2);
+      if (input.value !== formatted) return '';
+
+      const cursor = input.selectionEnd > input.selectionStart
+        ? Math.floor((input.selectionStart + input.selectionEnd) / 2)
+        : (input.selectionStart || 0);
+      const index = buildTextPathIndex(root, formatted);
+      const lineHit = findLinePathHit(index, cursor, root, formatted);
+      if (lineHit) return displayPathFromSourcePath(lineHit, root);
+
+      const rangeHit = findRangePathHit(index, cursor, root, formatted);
+      return displayPathFromSourcePath(rangeHit || '$', root);
+    }
+
+    function buildTextPathIndex(root, formatted) {
+      return collectJsonPaths(root, '$', []).map((path) => {
+        const segments = pathToSegments(path);
+        const value = getValueBySegments(root, segments);
+        const valueStart = findJsonCursor(formatted, segments, primitiveJsonText(value));
+        const keyStart = findJsonKeyCursor(formatted, root, segments);
+        const anchor = keyStart >= 0 ? keyStart : valueStart;
+        const lineStart = anchor >= 0 ? formatted.lastIndexOf('\n', Math.max(0, anchor - 1)) + 1 : -1;
+        const nextLine = anchor >= 0 ? formatted.indexOf('\n', anchor) : -1;
+        const lineEnd = nextLine >= 0 ? nextLine : formatted.length;
+        const parsedStringJson = typeof value === 'string' ? tryParseJsonStringValue(value) : null;
+        return {
+          path,
+          depth: segments.length,
+          keyStart,
+          valueStart,
+          valueEnd: valueStart >= 0 ? findJsonValueEnd(formatted, valueStart) : -1,
+          lineStart,
+          lineEnd,
+          parsedStringJson: parsedStringJson
+        };
+      }).filter((item) => item.valueStart >= 0 || item.keyStart >= 0);
+    }
+
+    function decodeJsonStringLiteral(literal) {
+      let text = '';
+      let spans = [];
+      let rawIndex = 0;
+      for (let i = 1; i < literal.length - 1; i += 1) {
+        let ch = literal[i];
+        let spanEnd = i + 1;
+        if (ch === '\\') {
+          const next = literal[i + 1];
+          if (next === 'u' && i + 5 < literal.length) {
+            text += String.fromCharCode(parseInt(literal.slice(i + 2, i + 6), 16));
+            spanEnd = i + 6;
+            i += 5;
+          } else {
+            const map = { b: '\b', f: '\f', n: '\n', r: '\r', t: '\t', '\\': '\\', '/': '/', '"': '"' };
+            text += Object.prototype.hasOwnProperty.call(map, next) ? map[next] : next;
+            spanEnd = i + 2;
+            i += 1;
+          }
+        } else {
+          text += ch;
+        }
+        spans.push({ start: i - (spanEnd - i - 1), end: spanEnd, rawIndex: rawIndex });
+        rawIndex += 1;
+      }
+      return {
+        text: text,
+        spans: spans,
+        cursorToRaw: function (localCursor) {
+          if (localCursor <= 0) return 0;
+          if (localCursor >= literal.length - 1) return Math.max(0, rawIndex - 1);
+          for (let i = 0; i < spans.length; i += 1) {
+            if (localCursor < spans[i].end) return spans[i].rawIndex;
+          }
+          return Math.max(0, rawIndex - 1);
+        }
+      };
+    }
+
+    function resolveParsedStringCursorPath(root, formatted, item, cursor) {
+      const sourceSegments = pathToSegments(item.path);
+      const rawString = getValueBySegments(root, sourceSegments);
+      if (typeof rawString !== 'string' || !item.parsedStringJson) return '';
+      const outerStart = item.valueStart;
+      const outerEnd = item.valueEnd;
+      if (outerStart < 0 || outerEnd <= outerStart) return '';
+      const literal = formatted.slice(outerStart, outerEnd);
+      if (!literal || literal[0] !== '"') return '';
+      const decoded = decodeJsonStringLiteral(literal);
+      const rawCursor = decoded.cursorToRaw(Math.max(0, cursor - outerStart));
+      if (rawCursor < 0) return '';
+
+      const innerHits = collectJsonPaths(item.parsedStringJson, '$', []).map((innerPath) => {
+        const innerSegments = pathToSegments(innerPath);
+        const innerValue = getValueBySegments(item.parsedStringJson, innerSegments);
+        const innerStart = findJsonCursor(rawString, innerSegments, primitiveJsonText(innerValue));
+        const innerKeyStart = findJsonKeyCursor(rawString, item.parsedStringJson, innerSegments);
+        return {
+          path: innerPath,
+          depth: innerSegments.length,
+          keyStart: innerKeyStart,
+          valueStart: innerStart,
+          valueEnd: innerStart >= 0 ? findJsonValueEnd(rawString, innerStart) : -1,
+        };
+      }).filter((hit) => hit.valueStart >= 0 || hit.keyStart >= 0);
+
+      let best = null;
+      innerHits.forEach((hit) => {
+        if (hit.keyStart >= 0 && rawCursor < hit.keyStart) return;
+        if (hit.valueEnd >= hit.valueStart && rawCursor <= hit.valueEnd) {
+          if (!best || hit.depth > best.depth || (hit.depth === best.depth && hit.valueStart > best.valueStart)) {
+            best = hit;
+          }
+        }
+      });
+
+      if (!best) return '';
+      return item.path + best.path.slice(1);
+    }
+
+        function findLinePathHit(index, cursor, root, formatted) {
+      let best = null;
+      index.forEach((item) => {
+        if (item.keyStart < 0) return;
+        if (cursor < item.lineStart || cursor > item.lineEnd) return;
+        if (item.parsedStringJson && cursor >= item.valueStart && cursor <= item.valueEnd) {
+          var parsedHit = resolveParsedStringCursorPath(root, formatted, item, cursor);
+          if (parsedHit) {
+            best = { path: parsedHit, depth: item.depth + 1, keyStart: item.keyStart };
+            return;
+          }
+        }
+        if (!best || item.depth > best.depth || (item.depth === best.depth && item.keyStart > best.keyStart)) {
+          best = item;
+        }
+      });
+      return best && best.path;
+    }
+
+    function findRangePathHit(index, cursor, root, formatted) {
+      let best = null;
+      index.forEach((item) => {
+        if (item.valueStart < 0 || item.valueEnd < item.valueStart) return;
+        if (cursor < item.valueStart || cursor > item.valueEnd) return;
+        if (item.parsedStringJson) {
+          var parsedHit = resolveParsedStringCursorPath(root, formatted, item, cursor);
+          if (parsedHit) {
+            if (!best || item.depth > best.depth || (item.depth === best.depth && item.valueStart > best.valueStart)) {
+              best = { path: parsedHit, depth: item.depth + 1, valueStart: item.valueStart };
+            }
+            return;
+          }
+        }
+        if (!best || item.depth > best.depth || (item.depth === best.depth && item.valueStart > best.valueStart)) {
+          best = item;
+        }
+      });
+      return best && best.path;
+    }
+
+    function findJsonValueEnd(text, start) {
+      if (start < 0) return -1;
+      let depth = 0;
+      let inString = false;
+      let escaped = false;
+      for (let i = start; i < text.length; i += 1) {
+        const ch = text[i];
+        if (inString) {
+          if (escaped) { escaped = false; continue; }
+          if (ch === '\\') { escaped = true; continue; }
+          if (ch === '"') inString = false;
+          continue;
+        }
+        if (ch === '"') inString = true;
+        else if (ch === '{' || ch === '[') depth += 1;
+        else if (ch === '}' || ch === ']') {
+          if (depth === 0) return i;
+          depth -= 1;
+        } else if ((ch === ',' || ch === '\n') && depth === 0) {
+          return i;
+        }
+      }
+      return text.length;
+    }
+
+    function getValueBySegments(root, segments) {
+      let value = root;
+      for (const segment of segments) {
+        if (value == null) return undefined;
+        value = value[segment];
+      }
+      return value;
+    }    function tryParseJsonStringValue(v) {
+      if (typeof v !== "string") return null;
+      var text = v.trim();
+      if (!text || (text[0] !== "{" && text[0] !== "[")) return null;
+      try {
+        var parsed = JSON.parse(text);
+        return parsed && typeof parsed === "object" ? parsed : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function decodeJsonStringLiteral(literal) {
+      let text = '';
+      let spans = [];
+      let rawIndex = 0;
+      for (let i = 1; i < literal.length - 1; i += 1) {
+        let ch = literal[i];
+        let spanEnd = i + 1;
+        if (ch === '\\') {
+          const next = literal[i + 1];
+          if (next === 'u' && i + 5 < literal.length) {
+            text += String.fromCharCode(parseInt(literal.slice(i + 2, i + 6), 16));
+            spanEnd = i + 6;
+            i += 5;
+          } else {
+            const map = { b: '\b', f: '\f', n: '\n', r: '\r', t: '\t', '\\': '\\', '/': '/', '"': '"' };
+            text += Object.prototype.hasOwnProperty.call(map, next) ? map[next] : next;
+            spanEnd = i + 2;
+            i += 1;
+          }
+        } else {
+          text += ch;
+        }
+        spans.push({ start: i - (spanEnd - i - 1), end: spanEnd, rawIndex: rawIndex });
+        rawIndex += 1;
+      }
+      return {
+        text: text,
+        spans: spans,
+        cursorToRaw: function (localCursor) {
+          if (localCursor <= 0) return 0;
+          if (localCursor >= literal.length - 1) return Math.max(0, rawIndex - 1);
+          for (let i = 0; i < spans.length; i += 1) {
+            if (localCursor < spans[i].end) return spans[i].rawIndex;
+          }
+          return Math.max(0, rawIndex - 1);
+        }
+      };
+    }
+
+    function resolveParsedStringCursorPath(root, formatted, item, cursor) {
+      const sourceSegments = pathToSegments(item.path);
+      const rawString = getValueBySegments(root, sourceSegments);
+      if (typeof rawString !== 'string' || !item.parsedStringJson) return '';
+      const outerStart = item.valueStart;
+      const outerEnd = item.valueEnd;
+      if (outerStart < 0 || outerEnd <= outerStart) return '';
+      const literal = formatted.slice(outerStart, outerEnd);
+      if (!literal || literal[0] !== '"') return '';
+      const decoded = decodeJsonStringLiteral(literal);
+      const rawCursor = decoded.cursorToRaw(Math.max(0, cursor - outerStart));
+      if (rawCursor < 0) return '';
+
+      const innerHits = collectJsonPaths(item.parsedStringJson, '$', []).map((innerPath) => {
+        const innerSegments = pathToSegments(innerPath);
+        const innerValue = getValueBySegments(item.parsedStringJson, innerSegments);
+        const innerStart = findJsonCursor(rawString, innerSegments, primitiveJsonText(innerValue));
+        const innerKeyStart = findJsonKeyCursor(rawString, item.parsedStringJson, innerSegments);
+        return {
+          path: innerPath,
+          depth: innerSegments.length,
+          keyStart: innerKeyStart,
+          valueStart: innerStart,
+          valueEnd: innerStart >= 0 ? findJsonValueEnd(rawString, innerStart) : -1,
+        };
+      }).filter((hit) => hit.valueStart >= 0 || hit.keyStart >= 0);
+
+      let best = null;
+      innerHits.forEach((hit) => {
+        if (hit.keyStart >= 0 && rawCursor < hit.keyStart) return;
+        if (hit.valueEnd >= hit.valueStart && rawCursor <= hit.valueEnd) {
+          if (!best || hit.depth > best.depth || (hit.depth === best.depth && hit.valueStart > best.valueStart)) {
+            best = hit;
+          }
+        }
+      });
+
+      if (!best) return '';
+      return item.path + best.path.slice(1);
+    }
+
+    function findJsonKeyCursor(text, root, segments) {
+      const key = segments[segments.length - 1];
+      if (typeof key !== 'string') return -1;
+
+      const parentSegments = segments.slice(0, -1);
+      const parentValue = getValueBySegments(root, parentSegments);
+      if (!parentValue || typeof parentValue !== 'object' || Array.isArray(parentValue)) return -1;
+
+      const parentStart = findJsonCursor(text, parentSegments, primitiveJsonText(parentValue));
+      if (parentStart < 0 || text[parentStart] !== '{') return -1;
+      return findDirectObjectKeyStart(text, parentStart, JSON.stringify(key));
+    }
+
+    function findDirectObjectKeyStart(text, objectStart, keyText) {
+      let pos = firstNonSpace(text, objectStart + 1);
+      while (pos >= 0 && pos < text.length && text[pos] !== '}') {
+        if (text[pos] !== '"') return -1;
+        const keyEnd = findStringEnd(text, pos);
+        if (keyEnd < 0) return -1;
+        const colon = firstNonSpace(text, keyEnd + 1);
+        if (text.slice(pos, keyEnd + 1) === keyText) return pos;
+        if (text[colon] !== ':') return -1;
+        const valueStart = firstNonSpace(text, colon + 1);
+        const next = findNextSiblingStart(text, valueStart);
+        if (next < 0) return -1;
+        pos = next;
+      }
+      return -1;
+    }
+
+    function findStringEnd(text, start) {
+      let escaped = false;
+      for (let i = start + 1; i < text.length; i += 1) {
+        const ch = text[i];
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (ch === '\\') {
+          escaped = true;
+          continue;
+        }
+        if (ch === '"') return i;
+      }
+      return -1;
+    }
+
+    function focusPreviewPath(path) {
+      if (!path) return;
+      pendingPreviewFocus = {
+        path,
+        bridgeId: previewBridgeId,
+        focusId: ++previewFocusSeq,
+        attempts: 0
+      };
+      flushPreviewFocus();
+    }
+
+    function flushPreviewFocus() {
+      const focus = pendingPreviewFocus;
+      if (!focus || focus.bridgeId !== previewBridgeId || !preview.contentWindow) return;
+      preview.contentWindow.postMessage({
+        type: 'json-table-focus-path',
+        path: focus.path,
+        focusId: focus.focusId,
+        bridgeId: focus.bridgeId
+      }, '*');
+      if (focus.attempts >= 5) return;
+      focus.attempts += 1;
+      setTimeout(() => {
+        if (pendingPreviewFocus && pendingPreviewFocus.focusId === focus.focusId) flushPreviewFocus();
+      }, 180);
+    }
+
+    function findJsonCursor(text, segments, target) {
+      let pos = 0;
+      for (const segment of segments) {
+        if (typeof segment === 'number') {
+          pos = findArrayItemStart(text, pos, segment);
+        } else {
+          const keyText = JSON.stringify(segment);
+          const keyPos = text.indexOf(keyText, pos);
+          if (keyPos < 0) return -1;
+          const colonPos = text.indexOf(':', keyPos + keyText.length);
+          if (colonPos < 0) return -1;
+          pos = firstNonSpace(text, colonPos + 1);
+        }
+        if (pos < 0) return -1;
+      }
+
+      if (!target) return pos;
+      if (text.slice(pos, pos + target.length) === target) return pos;
+      const nearby = text.indexOf(target, pos);
+      return nearby >= 0 ? nearby : pos;
+    }
+
+    function findArrayItemStart(text, valueStart, index) {
+      const arrayStart = text.indexOf('[', valueStart);
+      if (arrayStart < 0) return -1;
+      let pos = firstNonSpace(text, arrayStart + 1);
+      for (let i = 0; i < index; i += 1) {
+        pos = findNextSiblingStart(text, pos);
+        if (pos < 0) return -1;
+      }
+      return pos;
+    }
+
+    function findNextSiblingStart(text, start) {
+      let depth = 0;
+      let inString = false;
+      let escaped = false;
+      for (let i = start; i < text.length; i += 1) {
+        const ch = text[i];
+        if (inString) {
+          if (escaped) {
+            escaped = false;
+            continue;
+          }
+          if (ch === '\\') {
+            escaped = true;
+            continue;
+          }
+          if (ch === '"') inString = false;
+          continue;
+        }
+        if (ch === '"') inString = true;
+        else if (ch === '{' || ch === '[') depth += 1;
+        else if (ch === '}' || ch === ']') depth -= 1;
+        else if (ch === ',' && depth === 0) return firstNonSpace(text, i + 1);
+      }
+      return -1;
+    }
+
+    function firstNonSpace(text, start) {
+      let pos = start;
+      while (/\s/.test(text[pos] || '')) pos += 1;
+      return pos;
+    }
+
+    function estimateScrollTop(textarea, cursor) {
+      const before = textarea.value.slice(0, cursor);
+      const line = before.split('\n').length - 1;
+      const lineHeight = 18.6;
+      return Math.max(0, line * lineHeight - textarea.clientHeight * 0.35);
+    }
+
+    function capturePreviewStateFromDom() {
+      try {
+        const doc = preview.contentDocument;
+        if (!doc) return previewState;
+        const pathSelect = doc.getElementById('pathSelect');
+        const globalSearch = doc.getElementById('globalSearch');
+        const content = doc.getElementById('content');
+        return {
+          path: pathSelect ? pathSelect.value : '',
+          search: globalSearch ? globalSearch.value : '',
+          scrollTop: content ? content.scrollTop : 0,
+          scrollLeft: content ? content.scrollLeft : 0,
+          openPaths: Array.from(doc.querySelectorAll('details[data-path][open]')).map((item) => item.getAttribute('data-path'))
+        };
+      } catch (err) {
+        return previewState;
+      }
+    }
+
+    function restorePreviewState(state, bridgeId) {
+      if (!state || !preview.contentWindow || bridgeId !== previewBridgeId) return;
+      previewRestoringUntil = Date.now() + 900;
+      preview.contentWindow.postMessage({ type: 'json-table-restore-state', state, bridgeId }, '*');
+      setTimeout(() => {
+        if (bridgeId === previewBridgeId) {
+          previewState = capturePreviewStateFromDom() || state;
+          previewRestoringUntil = 0;
+        }
+      }, 950);
+    }
+
+    function iframeBridgeScript(bridgeId) {
+      return `<script>
+        (function () {
+          var BRIDGE_ID = ${bridgeId};
+          var pendingStateTimer = null;
+          var restoreInProgress = false;
+          var focusRequestId = 0;
+          var activeFocusToken = 0;
+          var activeFocusTimer = null;
+
+          function cellPath(cell) {
+            var row = cell && cell.closest('tr[data-row-path]');
+            if (!row) return '';
+            var rowPath = row.getAttribute('data-row-path') || '';
+            if (!rowPath) return '';
+            var table = row.closest('table');
+            var cellIndex = Array.prototype.indexOf.call(row.children, cell);
+            var header = table && table.tHead && table.tHead.rows[0] && table.tHead.rows[0].cells[cellIndex];
+            var col = header && header.getAttribute('data-col-key');
+            if (!col || col === 'Key' || col === 'Type' || col === '#' || col === 'Value') return rowPath;
+            return rowPath + '.' + col;
+          }
+
+          function cssEscape(value) {
+            if (window.CSS && CSS.escape) return CSS.escape(value);
+            return String(value).replace(/"/g, '\\"');
+          }
+
+
+          function installFocusStyle() {
+            if (document.getElementById('jsonTableFocusStyle')) return;
+            var style = document.createElement('style');
+            style.id = 'jsonTableFocusStyle';
+            style.textContent = [
+              '.json-focus-row > td {',
+              '  background: #eff6ff !important;',
+              '}',
+              '.json-focus-target {',
+              '  background: #dbeafe !important;',
+              '  outline: 3px solid #2563eb;',
+              '  outline-offset: -3px;',
+              '  position: relative;',
+              '  z-index: 6;',
+              '}',
+              '.json-focus-row > td.json-focus-target {',
+              '  background: #dbeafe !important;',
+              '}'
+            ].join('\\n');
+            document.head.appendChild(style);
+          }
+
+          function findRowByPath(path) {
+            var rows = document.querySelectorAll('tr[data-row-path]');
+            for (var i = 0; i < rows.length; i += 1) {
+              if (rows[i].getAttribute('data-row-path') === path) return rows[i];
+            }
+            return null;
+          }
+
+          function findTableByPath(path) {
+            var tables = document.querySelectorAll('table[data-table-id]');
+            for (var i = 0; i < tables.length; i += 1) {
+              if (tables[i].getAttribute('data-table-id') === path) return tables[i];
+            }
+            return null;
+          }
+
+          function collectState() {
+            var pathSelect = document.getElementById('pathSelect');
+            var globalSearch = document.getElementById('globalSearch');
+            var content = document.getElementById('content');
+            return {
+              path: pathSelect ? pathSelect.value : '',
+              search: globalSearch ? globalSearch.value : '',
+              scrollTop: content ? content.scrollTop : 0,
+              scrollLeft: content ? content.scrollLeft : 0,
+              openPaths: Array.prototype.map.call(document.querySelectorAll('details[data-path][open]'), function (item) {
+                return item.getAttribute('data-path');
+              })
+            };
+          }
+
+          function emitState(reason) {
+            parent.postMessage({ type: 'json-table-state', state: collectState(), bridgeId: BRIDGE_ID, reason: reason || '' }, '*');
+          }
+
+          function scheduleEmitState() {
+            if (restoreInProgress) return;
+            clearTimeout(pendingStateTimer);
+            pendingStateTimer = setTimeout(function () { emitState('change'); }, 120);
+          }
+
+          function optionExists(select, value) {
+            return Array.prototype.some.call(select.options || [], function (option) {
+              return option.value === value;
+            });
+          }
+
+          function setRootPath(path) {
+            var select = document.getElementById('pathSelect');
+            if (!select || !path || select.value === path || !optionExists(select, path)) return false;
+            select.value = path;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+          }
+
+          function bestRootPathFor(path) {
+            var select = document.getElementById('pathSelect');
+            if (!select) return '';
+            var best = '';
+            Array.prototype.forEach.call(select.options || [], function (option) {
+              var value = option.value;
+              var inside = path === value || path.indexOf(value + '.') === 0 || path.indexOf(value + '[') === 0;
+              if (inside && value.length > best.length) best = value;
+            });
+            return best || '$';
+          }
+
+          function ensureRootForPath(path) {
+            var select = document.getElementById('pathSelect');
+            var best = bestRootPathFor(path);
+            if (!select || !best || select.value === best) return false;
+            return setRootPath(best);
+          }
+
+          function setSearch(search) {
+            var input = document.getElementById('globalSearch');
+            if (!input || input.value === (search || '')) return;
+            input.value = search || '';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+
+          function restoreOpenPaths(paths) {
+            (paths || []).forEach(function (path) {
+              var details = document.querySelector('details[data-path="' + cssEscape(path) + '"]');
+              if (details && !details.open) details.open = true;
+            });
+          }
+
+          function restoreScroll(state) {
+            var content = document.getElementById('content');
+            if (!content) return;
+            content.scrollTop = Number(state.scrollTop || 0);
+            content.scrollLeft = Number(state.scrollLeft || 0);
+          }
+
+          function restoreState(state) {
+            if (!state) return;
+            restoreInProgress = true;
+            setRootPath(state.path);
+            setTimeout(function () {
+              setSearch(state.search);
+              setTimeout(function () {
+                restoreOpenPaths(state.openPaths);
+                setTimeout(function () {
+                  restoreOpenPaths(state.openPaths);
+                  restoreScroll(state);
+                  restoreInProgress = false;
+                  emitState('restored');
+                }, 120);
+              }, 120);
+            }, 120);
+          }
+
+          function ancestorPaths(path) {
+            var result = [];
+            var re = /\.([^\.\[]+)|\[(\d+)\]/g;
+            var current = '$';
+            var match;
+            while ((match = re.exec(path))) {
+              current += match[0];
+              result.push(current);
+            }
+            result.pop();
+            return result;
+          }
+
+          function findTarget(path) {
+            var cell = findCellByPath(path);
+            if (cell) return cell;
+            var row = findRowByPath(path);
+            if (row) return preferredCellForRow(row);
+            return null;
+          }
+
+          function findCellByPath(path) {
+            var cells = document.querySelectorAll('tbody td');
+            var first = null;
+            for (var i = 0; i < cells.length; i += 1) {
+              if (cellPath(cells[i]) !== path) continue;
+              if (!first) first = cells[i];
+              if (isPreferredFocusCell(cells[i])) return cells[i];
+            }
+            return first;
+          }
+
+          function isPreferredFocusCell(cell) {
+            if (!cell || !cell.classList) return false;
+            return cell.classList.contains('value-col') ||
+              (!cell.classList.contains('key-col') && !cell.classList.contains('index-col') && !cell.classList.contains('type-col'));
+          }
+
+          function preferredCellForRow(row) {
+            if (!row || !row.cells || !row.cells.length) return row;
+            var table = row.closest('table');
+            var headers = table && table.tHead && table.tHead.rows[0] && table.tHead.rows[0].cells;
+            if (!headers) return row.cells[row.cells.length - 1] || row;
+            for (var i = 0; i < headers.length; i += 1) {
+              if (headers[i].getAttribute('data-col-key') === 'Value') return row.cells[i] || row;
+            }
+            return row.cells[row.cells.length - 1] || row;
+          }
+
+          function clearFocusVisuals() {
+            activeFocusToken += 1;
+            if (activeFocusTimer) {
+              clearTimeout(activeFocusTimer);
+              activeFocusTimer = null;
+            }
+            Array.prototype.forEach.call(document.querySelectorAll('.json-focus-target'), function (item) {
+              item.classList.remove('json-focus-target');
+            });
+            Array.prototype.forEach.call(document.querySelectorAll('.json-focus-row'), function (item) {
+              item.classList.remove('json-focus-row');
+            });
+          }
+
+          function highlightTarget(target, focusId) {
+            installFocusStyle();
+            clearFocusVisuals();
+            var token = activeFocusToken;
+            target.scrollIntoView({ block: 'center', inline: 'center' });
+            var row = target.closest && target.closest('tr');
+            if (row) row.classList.add('json-focus-row');
+            target.classList.add('json-focus-target');
+            activeFocusTimer = setTimeout(function () {
+              if (token !== activeFocusToken) return;
+              target.classList.remove('json-focus-target');
+              if (row) row.classList.remove('json-focus-row');
+              activeFocusTimer = null;
+            }, 2200);
+            parent.postMessage({ type: 'json-table-focus-result', ok: true, focusId: focusId, bridgeId: BRIDGE_ID }, '*');
+            emitState('focused');
+          }
+
+          function rootFallbackTarget(path) {
+            var select = document.getElementById('pathSelect');
+            var selected = select && select.value;
+            if (path !== selected) return null;
+            return findTableByPath(path) || document.getElementById('content');
+          }
+
+          function focusPath(path, requestId, attempt, focusId) {
+            if (requestId !== focusRequestId) return;
+            attempt = attempt || 0;
+            if (attempt > 8) {
+              parent.postMessage({ type: 'json-table-focus-result', ok: false, focusId: focusId, bridgeId: BRIDGE_ID }, '*');
+              return;
+            }
+
+            if (ensureRootForPath(path)) {
+              setTimeout(function () { focusPath(path, requestId, attempt + 1, focusId); }, 140);
+              return;
+            }
+
+            var target = findTarget(path) || rootFallbackTarget(path);
+            if (!target) {
+              restoreOpenPaths(ancestorPaths(path));
+              setTimeout(function () { focusPath(path, requestId, attempt + 1, focusId); }, 120);
+              return;
+            }
+
+            highlightTarget(target, focusId);
+          }
+
+          document.addEventListener('click', function (event) {
+            var cell = event.target && event.target.closest && event.target.closest('td');
+            if (!cell) return;
+            var path = cellPath(cell);
+            if (!path) return;
+            parent.postMessage({ type: 'json-table-cell-click', path: path, bridgeId: BRIDGE_ID }, '*');
+            scheduleEmitState();
+          }, true);
+
+          document.addEventListener('toggle', scheduleEmitState, true);
+          document.addEventListener('change', scheduleEmitState, true);
+          document.addEventListener('input', scheduleEmitState, true);
+          var content = document.getElementById('content');
+          if (content) content.addEventListener('scroll', scheduleEmitState, { passive: true });
+
+          window.addEventListener('message', function (event) {
+            var data = event.data || {};
+            if (data.bridgeId && data.bridgeId !== BRIDGE_ID) return;
+            if (data.type === 'json-table-restore-state') restoreState(data.state);
+            if (data.type === 'json-table-focus-path') {
+              focusRequestId += 1;
+              focusPath(data.path, focusRequestId, 0, data.focusId);
+            }
+          });
+
+          emitState('ready');
+        })();
+      <\/script>`;
+    }
+
+    window.addEventListener('message', (event) => {
+      const data = event.data || {};
+      if (data.bridgeId && data.bridgeId !== previewBridgeId) return;
+      if (data.type === 'json-table-state') {
+        if (Date.now() < previewRestoringUntil && data.reason !== 'restored') return;
+        previewState = data.state || previewState;
+        if (data.reason === 'ready' || data.reason === 'restored') flushPreviewFocus();
+        if (data.reason === 'restored') previewRestoringUntil = 0;
+        return;
+      }
+      if (data.type === 'json-table-focus-result') {
+        if (pendingPreviewFocus && data.focusId === pendingPreviewFocus.focusId && data.ok) {
+          pendingPreviewFocus = null;
+        }
+        return;
+      }
+      if (data.type === 'json-table-cell-click' && data.path) {
+        locateJsonPath(data.path);
+      }
+    });
+
+    function renderNow(options = {}) {
+      const replaceOnInvalid = options.replaceOnInvalid === true;
+      const stateBeforeRender = hasRenderedPreview ? capturePreviewStateFromDom() : previewState;
+      if (stateBeforeRender) previewState = stateBeforeRender;
+      const responseText = input.value.trim();
+      localStorage.setItem(STORAGE_KEY, input.value);
+
+      if (!responseText) {
+        setStatus('请输入 JSON', 'error');
+        if (replaceOnInvalid || !hasRenderedPreview) errorPreview('请输入 JSON');
+        return;
+      }
+
+      try {
+        JSON.parse(responseText);
+      } catch (err) {
+        setStatus('JSON 解析失败，右侧保持上次有效表格', 'error');
+        if (replaceOnInvalid || !hasRenderedPreview) {
+          errorPreview(err && (err.message || String(err)));
+        }
+        return;
+      }
+
+      let capturedTemplate = '';
+      let capturedData = { raw: responseText };
+      const pm = {
+        response: {
+          text: () => responseText,
+          json: () => JSON.parse(responseText)
+        },
+        visualizer: {
+          set: (template, data) => {
+            capturedTemplate = template;
+            capturedData = data || { raw: responseText };
+          }
+        }
+      };
+
+      try {
+        new Function('pm', visualizerScript)(pm);
+        const raw = JSON.stringify(capturedData.raw || responseText).replace(/<\//g, '<\/');
+        const pmShim = '<script>window.pm={getData:function(cb){cb(null,{raw:' + raw + '});}};<\/script>';
+        const bridgeId = ++previewBridgeId;
+        const stateToRestore = previewState && JSON.parse(JSON.stringify(previewState));
+        previewRestoringUntil = stateToRestore ? Date.now() + 1200 : 0;
+        preview.onload = () => restorePreviewState(stateToRestore, bridgeId);
+        preview.srcdoc = pmShim + capturedTemplate + iframeBridgeScript(bridgeId);
+        hasRenderedPreview = true;
+        setStatus('已渲染 · ' + formatBytes(responseText), 'ok');
+      } catch (err) {
+        setStatus('渲染失败', 'error');
+        errorPreview(err && (err.stack || err.message || String(err)));
+      }
+    }
+
+    function scheduleRender() {
+      clearTimeout(renderTimer);
+      renderTimer = setTimeout(renderNow, 260);
+    }
+
+    document.getElementById('renderBtn').onclick = renderNow;
+    document.getElementById('formatBtn').onclick = () => {
+      try {
+        input.value = JSON.stringify(JSON.parse(input.value), null, 2);
+        renderNow();
+      } catch (err) {
+        setStatus('格式化失败：JSON 无效', 'error');
+      }
+    };
+    document.getElementById('minifyBtn').onclick = () => {
+      try {
+        input.value = JSON.stringify(JSON.parse(input.value));
+        renderNow();
+      } catch (err) {
+        setStatus('压缩失败：JSON 无效', 'error');
+      }
+    };
+    document.getElementById('sampleBtn').onclick = () => {
+      input.value = sampleJson;
+      renderNow();
+    };
+    document.getElementById('clearBtn').onclick = () => {
+      input.value = '';
+      renderNow({ replaceOnInvalid: true });
+      input.focus();
+    };
+    input.addEventListener('input', scheduleRender);
+    input.addEventListener('click', () => {
+      setTimeout(() => {
+        const path = pathFromInputCursor();
+        if (!path) return;
+        focusPreviewPath(path);
+        setStatus('右侧定位 · ' + path, 'ok');
+      }, 0);
+    });
+
+    initInputPaneToggle();
+    initSplitWidth();
+    bindSplitResizer();
+    input.value = localStorage.getItem(STORAGE_KEY) || sampleJson;
+    renderNow();
+  </script>
+</body>
+</html>
+  return;
+      }
+
+      let capturedTemplate = '';
+      let capturedData = { raw: responseText };
+      const pm = {
+        response: {
+          text: () => responseText,
+          json: () => JSON.parse(responseText)
+        },
+        visualizer: {
+          set: (template, data) => {
+            capturedTemplate = template;
+            capturedData = data || { raw: responseText };
+          }
+        }
+      };
+
+      try {
+        new Function('pm', visualizerScript)(pm);
+        const raw = JSON.stringify(capturedData.raw || responseText).replace(/<\//g, '<\/');
+        const pmShim = '<script>window.pm={getData:function(cb){cb(null,{raw:' + raw + '});}};<\/script>';
+        const bridgeId = ++previewBridgeId;
+        const stateToRestore = previewState && JSON.parse(JSON.stringify(previewState));
+        previewRestoringUntil = stateToRestore ? Date.now() + 1200 : 0;
+        preview.onload = () => restorePreviewState(stateToRestore, bridgeId);
+        preview.srcdoc = pmShim + capturedTemplate + iframeBridgeScript(bridgeId);
+        hasRenderedPreview = true;
+        setStatus('已渲染 · ' + formatBytes(responseText), 'ok');
+      } catch (err) {
+        setStatus('渲染失败', 'error');
+        errorPreview(err && (err.stack || err.message || String(err)));
+      }
+    }
+
+    function scheduleRender() {
+      clearTimeout(renderTimer);
+      renderTimer = setTimeout(renderNow, 260);
+    }
+
+    document.getElementById('renderBtn').onclick = renderNow;
+    document.getElementById('formatBtn').onclick = () => {
+      try {
+        input.value = JSON.stringify(JSON.parse(input.value), null, 2);
+        renderNow();
+      } catch (err) {
+        setStatus('格式化失败：JSON 无效', 'error');
+      }
+    };
+    document.getElementById('minifyBtn').onclick = () => {
+      try {
+        input.value = JSON.stringify(JSON.parse(input.value));
+        renderNow();
+      } catch (err) {
+        setStatus('压缩失败：JSON 无效', 'error');
+      }
+    };
+    document.getElementById('sampleBtn').onclick = () => {
+      input.value = sampleJson;
+      renderNow();
+    };
+    document.getElementById('clearBtn').onclick = () => {
+      input.value = '';
+      renderNow({ replaceOnInvalid: true });
+      input.focus();
+    };
+    input.addEventListener('input', scheduleRender);
+    input.addEventListener('click', () => {
+      setTimeout(() => {
+        const path = pathFromInputCursor();
+        if (!path) return;
+        focusPreviewPath(path);
+        setStatus('右侧定位 · ' + path, 'ok');
+      }, 0);
+    });
+
+    initInputPaneToggle();
+    initSplitWidth();
+    bindSplitResizer();
+    input.value = localStorage.getItem(STORAGE_KEY) || sampleJson;
+    renderNow();
+  </script>
+</body>
+</html>
