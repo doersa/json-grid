@@ -519,6 +519,120 @@
       return null;
     }
 
+    // 在父窗口作用域内提供 parsed 字符串解析能力（visualizerScript 内的同名函数
+    // 仅在 new Function 作用域中可用，父窗口拿不到，会导致点击左侧 JSON 时抛 ReferenceError）。
+    function tryParseJsonStringValue(value) {
+      if (typeof value !== 'string') return null;
+      const text = value.trim();
+      if (!text || (text[0] !== '{' && text[0] !== '[')) return null;
+      try {
+        const parsed = JSON.parse(text);
+        return parsed && typeof parsed === 'object' ? parsed : null;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    // 给定一段 JSON 文本与目标字符下标，返回“最内层包含该下标的节点”的路径后缀。
+    function deepestJsonPathSuffix(text, target) {
+      let pos = 0;
+      const skipWs = () => { while (pos < text.length && /\s/.test(text[pos])) pos += 1; };
+      const readString = () => {
+        let s = '';
+        pos += 1;
+        while (pos < text.length) {
+          const c = text[pos];
+          if (c === '\\') { pos += 2; }
+          else if (c === '"') { pos += 1; break; }
+          else { s += c; pos += 1; }
+        }
+        return s;
+      };
+      const parseNode = (path) => {
+        skipWs();
+        const start = pos;
+        const ch = text[pos];
+        if (ch === '{') {
+          pos += 1;
+          skipWs();
+          if (text[pos] === '}') { pos += 1; return path; }
+          let chosen = path;
+          while (true) {
+            skipWs();
+            const key = readString();
+            skipWs();
+            pos += 1; // 跳过冒号
+            skipWs();
+            const cStart = pos;
+            const childPath = path + '.' + key;
+            const childResult = parseNode(childPath);
+            const cEnd = pos;
+            if (target >= cStart && target < cEnd) chosen = childResult;
+            skipWs();
+            if (text[pos] === ',') { pos += 1; skipWs(); continue; }
+            if (text[pos] === '}' || pos >= text.length) { if (text[pos] === '}') pos += 1; break; }
+            pos += 1;
+          }
+          return chosen;
+        }
+        if (ch === '[') {
+          pos += 1;
+          skipWs();
+          if (text[pos] === ']') { pos += 1; return path; }
+          let chosen = path;
+          let idx = 0;
+          while (true) {
+            skipWs();
+            const cStart = pos;
+            const childPath = path + '[' + idx + ']';
+            const childResult = parseNode(childPath);
+            const cEnd = pos;
+            if (target >= cStart && target < cEnd) chosen = childResult;
+            skipWs();
+            if (text[pos] === ',') { pos += 1; skipWs(); idx += 1; continue; }
+            if (text[pos] === ']' || pos >= text.length) { if (text[pos] === ']') pos += 1; break; }
+            pos += 1;
+          }
+          return chosen;
+        }
+        // 基础值（字符串/数字/布尔/null）：自身即节点路径
+        if (ch === '"') readString();
+        else { while (pos < text.length && !/[\s,}\]]/.test(text[pos])) pos += 1; }
+        return path;
+      };
+      return parseNode('');
+    }
+
+    // 光标落在某个“可解析字符串值”内部时，计算其在解析后 JSON 里的内部子路径，
+    // 返回形如 $.data.list[0].settings_json.routing.timeoutMs 的完整源路径。
+    function resolveParsedStringCursorPath(root, formatted, item, cursor) {
+      const segments = pathToSegments(item.path);
+      const rawString = getValueBySegments(root, segments);
+      if (typeof rawString !== 'string') return null;
+      let parsed;
+      try {
+        parsed = JSON.parse(rawString);
+      } catch (err) {
+        return null;
+      }
+      if (!parsed || typeof parsed !== 'object') return null;
+
+      const literalStart = item.valueStart;
+      if (cursor < literalStart + 1) return null;
+      // 把外层面板里（位于转义字符串字面量内部）的光标位置，映射回原始未转义字符串的下标
+      let rawIndex = 0;
+      let i = literalStart + 1;
+      const literalEnd = item.valueEnd;
+      while (i < cursor && i < literalEnd) {
+        if (formatted[i] === '\\') i += 2;
+        else i += 1;
+        rawIndex += 1;
+      }
+
+      const innerSuffix = deepestJsonPathSuffix(rawString, rawIndex);
+      return item.path + innerSuffix;
+    }
+
     function mapStringIndexToJsonLiteral(rawString, literalStart, innerIndex) {
       const escapedPrefix = JSON.stringify(rawString.slice(0, innerIndex)).slice(1, -1);
       return literalStart + 1 + escapedPrefix.length;
@@ -587,123 +701,43 @@
       }).filter((item) => item.valueStart >= 0 || item.keyStart >= 0);
     }
 
-    function decodeJsonStringLiteral(literal) {
-      let text = '';
-      let spans = [];
-      let rawIndex = 0;
-      for (let i = 1; i < literal.length - 1; i += 1) {
-        let ch = literal[i];
-        let spanEnd = i + 1;
-        if (ch === '\\') {
-          const next = literal[i + 1];
-          if (next === 'u' && i + 5 < literal.length) {
-            text += String.fromCharCode(parseInt(literal.slice(i + 2, i + 6), 16));
-            spanEnd = i + 6;
-            i += 5;
-          } else {
-            const map = { b: '\b', f: '\f', n: '\n', r: '\r', t: '\t', '\\': '\\', '/': '/', '"': '"' };
-            text += Object.prototype.hasOwnProperty.call(map, next) ? map[next] : next;
-            spanEnd = i + 2;
-            i += 1;
-          }
-        } else {
-          text += ch;
-        }
-        spans.push({ start: i - (spanEnd - i - 1), end: spanEnd, rawIndex: rawIndex });
-        rawIndex += 1;
-      }
-      return {
-        text: text,
-        spans: spans,
-        cursorToRaw: function (localCursor) {
-          if (localCursor <= 0) return 0;
-          if (localCursor >= literal.length - 1) return Math.max(0, rawIndex - 1);
-          for (let i = 0; i < spans.length; i += 1) {
-            if (localCursor < spans[i].end) return spans[i].rawIndex;
-          }
-          return Math.max(0, rawIndex - 1);
-        }
-      };
-    }
-
-    function resolveParsedStringCursorPath(root, formatted, item, cursor) {
-      const sourceSegments = pathToSegments(item.path);
-      const rawString = getValueBySegments(root, sourceSegments);
-      if (typeof rawString !== 'string' || !item.parsedStringJson) return '';
-      const outerStart = item.valueStart;
-      const outerEnd = item.valueEnd;
-      if (outerStart < 0 || outerEnd <= outerStart) return '';
-      const literal = formatted.slice(outerStart, outerEnd);
-      if (!literal || literal[0] !== '"') return '';
-      const decoded = decodeJsonStringLiteral(literal);
-      const rawCursor = decoded.cursorToRaw(Math.max(0, cursor - outerStart));
-      if (rawCursor < 0) return '';
-
-      const innerHits = collectJsonPaths(item.parsedStringJson, '$', []).map((innerPath) => {
-        const innerSegments = pathToSegments(innerPath);
-        const innerValue = getValueBySegments(item.parsedStringJson, innerSegments);
-        const innerStart = findJsonCursor(rawString, innerSegments, primitiveJsonText(innerValue));
-        const innerKeyStart = findJsonKeyCursor(rawString, item.parsedStringJson, innerSegments);
-        return {
-          path: innerPath,
-          depth: innerSegments.length,
-          keyStart: innerKeyStart,
-          valueStart: innerStart,
-          valueEnd: innerStart >= 0 ? findJsonValueEnd(rawString, innerStart) : -1,
-        };
-      }).filter((hit) => hit.valueStart >= 0 || hit.keyStart >= 0);
-
+    function findLinePathHit(index, cursor, root, formatted) {
       let best = null;
-      innerHits.forEach((hit) => {
-        if (hit.keyStart >= 0 && rawCursor < hit.keyStart) return;
-        if (hit.valueEnd >= hit.valueStart && rawCursor <= hit.valueEnd) {
-          if (!best || hit.depth > best.depth || (hit.depth === best.depth && hit.valueStart > best.valueStart)) {
-            best = hit;
-          }
-        }
-      });
-
-      if (!best) return '';
-      return item.path + best.path.slice(1);
-    }
-
-        function findLinePathHit(index, cursor, root, formatted) {
-      let best = null;
-      index.forEach((item) => {
-        if (item.keyStart < 0) return;
-        if (cursor < item.lineStart || cursor > item.lineEnd) return;
+      let parsedHit = null;
+      for (let k = 0; k < index.length; k += 1) {
+        const item = index[k];
+        if (item.keyStart < 0) continue;
+        if (cursor < item.lineStart || cursor > item.lineEnd) continue;
+        // 命中可解析字符串值时，优先落到 parsed 内部子路径
         if (item.parsedStringJson && cursor >= item.valueStart && cursor <= item.valueEnd) {
-          var parsedHit = resolveParsedStringCursorPath(root, formatted, item, cursor);
-          if (parsedHit) {
-            best = { path: parsedHit, depth: item.depth + 1, keyStart: item.keyStart };
-            return;
-          }
+          const hit = resolveParsedStringCursorPath(root, formatted, item, cursor);
+          if (hit) parsedHit = hit;
         }
         if (!best || item.depth > best.depth || (item.depth === best.depth && item.keyStart > best.keyStart)) {
           best = item;
         }
-      });
+      }
+      if (parsedHit) return parsedHit;
       return best && best.path;
     }
 
     function findRangePathHit(index, cursor, root, formatted) {
       let best = null;
-      index.forEach((item) => {
-        if (item.valueStart < 0 || item.valueEnd < item.valueStart) return;
-        if (cursor < item.valueStart || cursor > item.valueEnd) return;
+      let parsedHit = null;
+      for (let k = 0; k < index.length; k += 1) {
+        const item = index[k];
+        if (item.valueStart < 0 || item.valueEnd < item.valueStart) continue;
+        if (cursor < item.valueStart || cursor > item.valueEnd) continue;
+        // 命中可解析字符串值时，优先落到 parsed 内部子路径
         if (item.parsedStringJson) {
-          var parsedHit = resolveParsedStringCursorPath(root, formatted, item, cursor);
-          if (parsedHit) {
-            if (!best || item.depth > best.depth || (item.depth === best.depth && item.valueStart > best.valueStart)) {
-              best = { path: parsedHit, depth: item.depth + 1, valueStart: item.valueStart };
-            }
-            return;
-          }
+          const hit = resolveParsedStringCursorPath(root, formatted, item, cursor);
+          if (hit) parsedHit = hit;
         }
         if (!best || item.depth > best.depth || (item.depth === best.depth && item.valueStart > best.valueStart)) {
           best = item;
         }
-      });
+      }
+      if (parsedHit) return parsedHit;
       return best && best.path;
     }
 
@@ -739,96 +773,6 @@
         value = value[segment];
       }
       return value;
-    }    function tryParseJsonStringValue(v) {
-      if (typeof v !== "string") return null;
-      var text = v.trim();
-      if (!text || (text[0] !== "{" && text[0] !== "[")) return null;
-      try {
-        var parsed = JSON.parse(text);
-        return parsed && typeof parsed === "object" ? parsed : null;
-      } catch (e) {
-        return null;
-      }
-    }
-
-    function decodeJsonStringLiteral(literal) {
-      let text = '';
-      let spans = [];
-      let rawIndex = 0;
-      for (let i = 1; i < literal.length - 1; i += 1) {
-        let ch = literal[i];
-        let spanEnd = i + 1;
-        if (ch === '\\') {
-          const next = literal[i + 1];
-          if (next === 'u' && i + 5 < literal.length) {
-            text += String.fromCharCode(parseInt(literal.slice(i + 2, i + 6), 16));
-            spanEnd = i + 6;
-            i += 5;
-          } else {
-            const map = { b: '\b', f: '\f', n: '\n', r: '\r', t: '\t', '\\': '\\', '/': '/', '"': '"' };
-            text += Object.prototype.hasOwnProperty.call(map, next) ? map[next] : next;
-            spanEnd = i + 2;
-            i += 1;
-          }
-        } else {
-          text += ch;
-        }
-        spans.push({ start: i - (spanEnd - i - 1), end: spanEnd, rawIndex: rawIndex });
-        rawIndex += 1;
-      }
-      return {
-        text: text,
-        spans: spans,
-        cursorToRaw: function (localCursor) {
-          if (localCursor <= 0) return 0;
-          if (localCursor >= literal.length - 1) return Math.max(0, rawIndex - 1);
-          for (let i = 0; i < spans.length; i += 1) {
-            if (localCursor < spans[i].end) return spans[i].rawIndex;
-          }
-          return Math.max(0, rawIndex - 1);
-        }
-      };
-    }
-
-    function resolveParsedStringCursorPath(root, formatted, item, cursor) {
-      const sourceSegments = pathToSegments(item.path);
-      const rawString = getValueBySegments(root, sourceSegments);
-      if (typeof rawString !== 'string' || !item.parsedStringJson) return '';
-      const outerStart = item.valueStart;
-      const outerEnd = item.valueEnd;
-      if (outerStart < 0 || outerEnd <= outerStart) return '';
-      const literal = formatted.slice(outerStart, outerEnd);
-      if (!literal || literal[0] !== '"') return '';
-      const decoded = decodeJsonStringLiteral(literal);
-      const rawCursor = decoded.cursorToRaw(Math.max(0, cursor - outerStart));
-      if (rawCursor < 0) return '';
-
-      const innerHits = collectJsonPaths(item.parsedStringJson, '$', []).map((innerPath) => {
-        const innerSegments = pathToSegments(innerPath);
-        const innerValue = getValueBySegments(item.parsedStringJson, innerSegments);
-        const innerStart = findJsonCursor(rawString, innerSegments, primitiveJsonText(innerValue));
-        const innerKeyStart = findJsonKeyCursor(rawString, item.parsedStringJson, innerSegments);
-        return {
-          path: innerPath,
-          depth: innerSegments.length,
-          keyStart: innerKeyStart,
-          valueStart: innerStart,
-          valueEnd: innerStart >= 0 ? findJsonValueEnd(rawString, innerStart) : -1,
-        };
-      }).filter((hit) => hit.valueStart >= 0 || hit.keyStart >= 0);
-
-      let best = null;
-      innerHits.forEach((hit) => {
-        if (hit.keyStart >= 0 && rawCursor < hit.keyStart) return;
-        if (hit.valueEnd >= hit.valueStart && rawCursor <= hit.valueEnd) {
-          if (!best || hit.depth > best.depth || (hit.depth === best.depth && hit.valueStart > best.valueStart)) {
-            best = hit;
-          }
-        }
-      });
-
-      if (!best) return '';
-      return item.path + best.path.slice(1);
     }
 
     function findJsonKeyCursor(text, root, segments) {
@@ -1355,90 +1299,6 @@
           errorPreview(err && (err.message || String(err)));
         }
         return;
-      }
-
-      let capturedTemplate = '';
-      let capturedData = { raw: responseText };
-      const pm = {
-        response: {
-          text: () => responseText,
-          json: () => JSON.parse(responseText)
-        },
-        visualizer: {
-          set: (template, data) => {
-            capturedTemplate = template;
-            capturedData = data || { raw: responseText };
-          }
-        }
-      };
-
-      try {
-        new Function('pm', visualizerScript)(pm);
-        const raw = JSON.stringify(capturedData.raw || responseText).replace(/<\//g, '<\/');
-        const pmShim = '<script>window.pm={getData:function(cb){cb(null,{raw:' + raw + '});}};<\/script>';
-        const bridgeId = ++previewBridgeId;
-        const stateToRestore = previewState && JSON.parse(JSON.stringify(previewState));
-        previewRestoringUntil = stateToRestore ? Date.now() + 1200 : 0;
-        preview.onload = () => restorePreviewState(stateToRestore, bridgeId);
-        preview.srcdoc = pmShim + capturedTemplate + iframeBridgeScript(bridgeId);
-        hasRenderedPreview = true;
-        setStatus('已渲染 · ' + formatBytes(responseText), 'ok');
-      } catch (err) {
-        setStatus('渲染失败', 'error');
-        errorPreview(err && (err.stack || err.message || String(err)));
-      }
-    }
-
-    function scheduleRender() {
-      clearTimeout(renderTimer);
-      renderTimer = setTimeout(renderNow, 260);
-    }
-
-    document.getElementById('renderBtn').onclick = renderNow;
-    document.getElementById('formatBtn').onclick = () => {
-      try {
-        input.value = JSON.stringify(JSON.parse(input.value), null, 2);
-        renderNow();
-      } catch (err) {
-        setStatus('格式化失败：JSON 无效', 'error');
-      }
-    };
-    document.getElementById('minifyBtn').onclick = () => {
-      try {
-        input.value = JSON.stringify(JSON.parse(input.value));
-        renderNow();
-      } catch (err) {
-        setStatus('压缩失败：JSON 无效', 'error');
-      }
-    };
-    document.getElementById('sampleBtn').onclick = () => {
-      input.value = sampleJson;
-      renderNow();
-    };
-    document.getElementById('clearBtn').onclick = () => {
-      input.value = '';
-      renderNow({ replaceOnInvalid: true });
-      input.focus();
-    };
-    input.addEventListener('input', scheduleRender);
-    input.addEventListener('click', () => {
-      setTimeout(() => {
-        const path = pathFromInputCursor();
-        if (!path) return;
-        focusPreviewPath(path);
-        setStatus('右侧定位 · ' + path, 'ok');
-      }, 0);
-    });
-
-    initInputPaneToggle();
-    initSplitWidth();
-    bindSplitResizer();
-    input.value = localStorage.getItem(STORAGE_KEY) || sampleJson;
-    renderNow();
-  </script>
-</body>
-</html>
-  return;
       }
 
       let capturedTemplate = '';
