@@ -1,0 +1,78 @@
+
+
+<div class="app">
+  <div class="bar">
+    <div class="title">JSON Table</div>
+    <div class="meta" id="meta"></div>
+    <button id="pathUp" title="上一级路径">上级</button>
+    <select id="pathSelect" class="path-select"></select>
+    <input id="globalSearch" class="search" placeholder="全局搜索">
+    <button id="resetFilters">重置过滤</button>
+    <button id="toggle">原始</button>
+    <div class="settings-wrap" id="settingsWrap">
+      <button id="settingsBtn" class="settings-btn" title="设置" aria-label="设置" aria-expanded="false">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M3 4.5h10M3 11.5h10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <circle cx="6" cy="4.5" r="1.7" fill="#fff" stroke="currentColor" stroke-width="1.2"/>
+          <circle cx="10" cy="11.5" r="1.7" fill="#fff" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+      </button>
+      <div id="settingsMenu" class="settings-menu" hidden>
+        <div class="settings-title">设置</div>
+        <label class="setting-row">
+          <input id="showTypeCheck" type="checkbox">
+          <span>显示 Type 列</span>
+        </label>
+        <label class="setting-row" title="滚动时保持表头行固定在顶部（仅固定行；冻结列请用各列设置里的锁图标）">
+          <input id="freezeHeaderCheck" type="checkbox">
+          <span>固定表头行</span>
+        </label>
+        <label class="setting-row">
+          <input id="showStickyHeaderCheck" type="checkbox">
+          <span>显示层级浮动表头</span>
+        </label>
+        <label class="setting-row">
+          <input id="parseJsonStringCheck" type="checkbox">
+          <span>解析 JSON 字符串</span>
+        </label>
+        <label class="setting-row">
+          <span>浮动表头模式</span>
+          <select id="headerModeSelect" style="margin-left:auto;max-width:96px">
+            <option value="single">单层</option>
+            <option value="multi">多层</option>
+          </select>
+        </label>
+        <div class="settings-section">
+          <div class="settings-title">字段显示</div>
+          <div id="columnSettings" class="column-list"></div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-title">复制 / 导出</div>
+          <div class="settings-actions">
+            <button id="copyPathBtn">复制路径</button>
+            <button id="copyJsonBtn">复制 JSON</button>
+            <button id="exportJsonBtn">导出 JSON</button>
+            <button id="exportCsvBtn">导出 CSV</button>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-title">路径</div>
+          <button id="favPathBtn" class="path-chip">收藏当前路径</button>
+          <div id="pathShortcuts" class="path-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="filter-chips" id="filterChips"></div>
+  <div class="sticky-context" id="stickyContextBar" title="当前滚动层级">
+    <span class="sticky-context-label">当前层级</span>
+    <span class="sticky-context-path" id="stickyContextPath"></span>
+    <span class="sticky-context-summary" id="stickyContextSummary"></span>
+    <button id="stickyContextJump" type="button">定位</button>
+  </div>
+  <div class="sticky-table-head" id="stickyTableHead">
+    <div class="sticky-table-head-inner" id="stickyTableHeadInner"></div>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+

@@ -1,0 +1,428 @@
+{
+  "request_id": "demo-request-20260806-001",
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "list": [
+      {
+        "project_id": 1001,
+        "title": "North Star Demo",
+        "lifecycle": "active",
+        "channel": "mobile",
+        "category": "analysis",
+        "priority_score": 98.5,
+        "enabled": true,
+        "owner_display": "User A",
+        "budget_units": 120000,
+        "daily_limit": 3000,
+        "labels": [
+          "hot",
+          "new",
+          "mobile"
+        ],
+        "settings_json": "{\"maxItems\":2,\"routing\":{\"timeoutMs\":1000,\"levels\":[{\"name\":\"Level 1\",\"price\":45,\"weight\":70},{\"name\":\"Level 2\",\"price\":30,\"weight\":30}]},\"flags\":{\"parseJsonString\":true,\"fallback\":false}}",
+        "broken_json": "{\"a\":1,",
+        "metrics": {
+          "views": 288812,
+          "actions": 14722,
+          "rate": 0.05097,
+          "amount": 9182.45
+        },
+        "batches": [
+          {
+            "batch_code": "BATCH-DEMO-01",
+            "channel": "partner-a",
+            "region": "east",
+            "items": [
+              {
+                "item_code": "DEMO-30016",
+                "item_style": "compact",
+                "item_type": 1,
+                "unit_cost": 10.48,
+                "unit_price": 4500,
+                "rate": 0.4292,
+                "display_price": "45.00",
+                "terminal_node": false,
+                "suppressed": 0
+              },
+              {
+                "item_code": "DEMO-30016-A",
+                "item_style": "rich",
+                "item_type": 2,
+                "unit_cost": 8.35,
+                "unit_price": 3000,
+                "rate": 0.3589,
+                "display_price": "30.00",
+                "terminal_node": false,
+                "suppressed": 0
+              },
+              {
+                "item_code": "DEMO-1001-LOW",
+                "item_style": "standard",
+                "item_type": 3,
+                "unit_cost": 4.56,
+                "unit_price": 1500,
+                "rate": 0.329,
+                "display_price": "15.00",
+                "terminal_node": true,
+                "suppressed": 1
+              }
+            ]
+          },
+          {
+            "batch_code": "BATCH-DEMO-02",
+            "channel": "direct",
+            "region": "south",
+            "items": [
+              {
+                "item_code": "MOBILE-1001",
+                "item_style": "reward",
+                "item_type": 4,
+                "unit_cost": 11.2,
+                "unit_price": 5200,
+                "rate": 0.442,
+                "display_price": "52.00",
+                "terminal_node": false,
+                "suppressed": 0
+              },
+              {
+                "item_code": "MOBILE-EMPTY",
+                "item_style": "",
+                "item_type": 1,
+                "unit_cost": 0,
+                "unit_price": 0,
+                "rate": 0,
+                "display_price": "0.00",
+                "terminal_node": true,
+                "suppressed": 1
+              }
+            ]
+          }
+        ],
+        "history": [
+          {
+            "date": "2026-08-01",
+            "lifecycle": "draft",
+            "priority_score": 82
+          },
+          {
+            "date": "2026-08-05",
+            "lifecycle": "active",
+            "priority_score": 98.5
+          }
+        ]
+      },
+      {
+        "project_id": 1002,
+        "title": "Return Flow Demo",
+        "lifecycle": "paused",
+        "channel": "web",
+        "category": "commerce",
+        "priority_score": 72,
+        "enabled": false,
+        "owner_display": null,
+        "budget_units": 80000,
+        "daily_limit": null,
+        "labels": [
+          "return",
+          "discount"
+        ],
+        "settings_json": "[{\"slot\":\"home\",\"enabled\":true,\"limit\":3},{\"slot\":\"detail\",\"enabled\":false,\"limit\":1}]",
+        "broken_json": "not-json",
+        "metrics": {
+          "views": 158002,
+          "actions": 5001,
+          "rate": 0.03165,
+          "amount": 2380.18
+        },
+        "batches": [
+          {
+            "batch_code": "BATCH-DEMO-03",
+            "channel": "partner-b",
+            "region": "north",
+            "items": [
+              {
+                "item_code": "WEB-2002-A",
+                "item_style": "compact",
+                "item_type": 1,
+                "unit_cost": 6.5,
+                "unit_price": 2200,
+                "rate": 0.295,
+                "display_price": "22.00",
+                "terminal_node": false,
+                "suppressed": 0
+              },
+              {
+                "item_code": "WEB-2002-B",
+                "item_style": "rich",
+                "item_type": 2,
+                "unit_cost": 7.9,
+                "unit_price": 2600,
+                "rate": 0.314,
+                "display_price": "26.00",
+                "terminal_node": true,
+                "suppressed": 0
+              }
+            ]
+          }
+        ],
+        "history": [
+          {
+            "date": "2026-07-27",
+            "lifecycle": "active",
+            "priority_score": 80
+          },
+          {
+            "date": "2026-08-03",
+            "lifecycle": "paused",
+            "priority_score": 72
+          }
+        ]
+      },
+      {
+        "project_id": 1003,
+        "title": "Video Layout Demo",
+        "lifecycle": "active",
+        "channel": "partner-a",
+        "category": "finance",
+        "priority_score": 88.25,
+        "enabled": true,
+        "owner_display": "User B",
+        "budget_units": 150000,
+        "daily_limit": 4500,
+        "labels": [],
+        "settings_json": "{\"media\":{\"autoplay\":true,\"mute\":true,\"durationSec\":15},\"experiment\":{\"group_id\":\"GROUP-DEMO-20555\",\"rule_id\":12395}}",
+        "broken_json": "{maxItems:2}",
+        "metrics": {
+          "views": 301245,
+          "actions": 12066,
+          "rate": 0.04005,
+          "amount": 7221.01
+        },
+        "batches": [
+          {
+            "batch_code": "BATCH-DEMO-04",
+            "channel": "partner-a",
+            "region": "west",
+            "items": [
+              {
+                "item_code": "PARTNER-3003-H",
+                "item_style": "rich",
+                "item_type": 2,
+                "unit_cost": 9.8,
+                "unit_price": 4100,
+                "rate": 0.419,
+                "display_price": "41.00",
+                "terminal_node": false,
+                "suppressed": 0
+              },
+              {
+                "item_code": "PARTNER-3003-N",
+                "item_style": "standard",
+                "item_type": 3,
+                "unit_cost": 5.1,
+                "unit_price": 1800,
+                "rate": 0.352,
+                "display_price": "18.00",
+                "terminal_node": true,
+                "suppressed": 0
+              }
+            ]
+          }
+        ],
+        "history": [
+          {
+            "date": "2026-08-01",
+            "lifecycle": "active",
+            "priority_score": 86
+          },
+          {
+            "date": "2026-08-06",
+            "lifecycle": "active",
+            "priority_score": 88.25
+          }
+        ]
+      },
+      {
+        "project_id": 1004,
+        "title": "Empty Value Demo",
+        "lifecycle": "testing",
+        "channel": "api",
+        "category": "education",
+        "priority_score": 0,
+        "enabled": true,
+        "owner_display": "",
+        "budget_units": 0,
+        "daily_limit": 0,
+        "labels": [
+          "empty",
+          null,
+          "api"
+        ],
+        "settings_json": "{}",
+        "broken_json": "[1,2,",
+        "metrics": {
+          "views": 0,
+          "actions": 0,
+          "rate": 0,
+          "amount": 0
+        },
+        "batches": [
+          {
+            "batch_code": "BATCH-EMPTY",
+            "channel": "api",
+            "region": null,
+            "items": [
+              {
+                "item_code": "",
+                "item_style": "",
+                "item_type": 0,
+                "unit_cost": 0,
+                "unit_price": 0,
+                "rate": 0,
+                "display_price": "",
+                "terminal_node": true,
+                "suppressed": 0
+              }
+            ]
+          }
+        ],
+        "history": []
+      },
+      {
+        "project_id": 1005,
+        "title": "Legacy Mix Demo",
+        "lifecycle": "archived",
+        "channel": "mobile",
+        "category": "news",
+        "priority_score": 63.75,
+        "enabled": false,
+        "owner_display": "User C",
+        "budget_units": 64000,
+        "daily_limit": 1200,
+        "labels": [
+          "legacy",
+          "mobile",
+          "low-price"
+        ],
+        "settings_json": "{\"fallbackList\":[\"DEMO-1001\",\"DEMO-1005\"],\"limits\":{\"min\":0,\"max\":5}}",
+        "broken_json": "",
+        "metrics": {
+          "views": 91002,
+          "actions": 1801,
+          "rate": 0.01979,
+          "amount": 814.3
+        },
+        "batches": [
+          {
+            "batch_code": "BATCH-DEMO-05",
+            "channel": "direct",
+            "region": "central",
+            "items": [
+              {
+                "item_code": "LEGACY-1005-A",
+                "item_style": "compact",
+                "item_type": 1,
+                "unit_cost": 2.2,
+                "unit_price": 900,
+                "rate": 0.21,
+                "display_price": "9.00",
+                "terminal_node": false,
+                "suppressed": 0
+              },
+              {
+                "item_code": "LEGACY-1005-B",
+                "item_style": "feed",
+                "item_type": 5,
+                "unit_cost": 1.1,
+                "unit_price": 300,
+                "rate": 0.11,
+                "display_price": "3.00",
+                "terminal_node": true,
+                "suppressed": 1
+              }
+            ]
+          }
+        ],
+        "history": [
+          {
+            "date": "2026-06-01",
+            "lifecycle": "active",
+            "priority_score": 75
+          },
+          {
+            "date": "2026-07-01",
+            "lifecycle": "archived",
+            "priority_score": 63.75
+          }
+        ]
+      }
+    ],
+    "experiment": {
+      "control_ids": [
+        "DEMO-30016",
+        "DEMO-1001",
+        "DEMO-1002"
+      ],
+      "assignment": {
+        "group_id": "GROUP-DEMO-20555",
+        "experiment_json": "{\"rule\":{\"timeoutPair\":\"1000,1000\",\"retry\":3,\"sampleSize\":3000},\"weights\":{\"mobile\":\"1,1\",\"web\":3},\"display\":{\"maxItems\":2,\"requestCount\":99999,\"showCount\":999,\"mediaShowCount\":1}}",
+        "rule_id": 12395
+      },
+      "segments": [
+        {
+          "segment": "new_user",
+          "channel": "mobile",
+          "count": 12001,
+          "enabled": true
+        },
+        {
+          "segment": "paid_user",
+          "channel": "web",
+          "count": 820,
+          "enabled": false
+        },
+        {
+          "segment": "silent_user",
+          "channel": "partner-a",
+          "count": 30016,
+          "enabled": true
+        }
+      ]
+    },
+    "summary_rows": [
+      {
+        "path": "$.data.list",
+        "rows": 5,
+        "purpose": "默认根路径候选"
+      },
+      {
+        "path": "$.data.list[0].batches[0].items",
+        "rows": 3,
+        "purpose": "多层 array 嵌套过滤"
+      },
+      {
+        "path": "$.data.experiment.segments",
+        "rows": 3,
+        "purpose": "短表格排序"
+      }
+    ],
+    "meta": {
+      "generated_at": "2026-08-06T15:00:00+08:00",
+      "total": 5,
+      "flags": {
+        "parseJsonString": true,
+        "freezeHeader": false,
+        "stickyHeader": true
+      },
+      "notes": "通用脱敏示例：包含对象数组、嵌套数组、JSON 字符串、坏 JSON、空字符串、null、number、boolean，用于验证过滤/排序/展开/复制。"
+    }
+  },
+  "debug": {
+    "nullable": null,
+    "empty_string": "",
+    "empty_array": [],
+    "empty_object": {},
+    "large_number": 9007199254740991
+  }
+}

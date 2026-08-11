@@ -1,0 +1,3216 @@
+
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  }
+
+  .app {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #f7f8fb;
+    color: #172033;
+  }
+
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .title {
+    font-weight: 700;
+  }
+
+  .meta {
+    margin-right: auto;
+    color: #6b7280;
+    font-size: 12px;
+  }
+
+  .meta-path {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .meta-path-btn {
+    border: 0;
+    background: transparent;
+    padding: 0 2px;
+    color: #2563eb;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .meta-path-btn:hover {
+    text-decoration: underline;
+    background: transparent;
+  }
+
+  .meta-path-sep {
+    color: #9ca3af;
+  }
+
+  .search {
+    width: 260px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 7px 10px;
+  }
+
+  button {
+    border: 1px solid #d1d5db;
+    background: #fff;
+    border-radius: 8px;
+    padding: 7px 10px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background: #f3f4f6;
+  }
+
+  .settings-wrap {
+    position: relative;
+  }
+
+  .settings-btn {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    color: #4b5563;
+    background: #fff;
+    transition: background .14s ease, border-color .14s ease, color .14s ease, box-shadow .14s ease;
+  }
+
+  .settings-btn svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+  }
+
+  .settings-btn:hover,
+  .settings-btn.active {
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
+  }
+
+  .settings-menu {
+    position: absolute;
+    top: 38px;
+    right: 0;
+    width: 240px;
+    padding: 8px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+    z-index: 50;
+  }
+
+  .settings-menu[hidden] {
+    display: none;
+  }
+
+  .settings-title {
+    padding: 2px 8px 7px;
+    color: #6b7280;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .setting-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #172033;
+  }
+
+  .setting-row .col-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+  }
+
+  .setting-row:hover {
+    background: #f3f4f6;
+  }
+
+  .setting-row .col-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .freeze-toggle {
+    border: 0;
+    background: transparent;
+    padding: 3px;
+    cursor: pointer;
+    color: #9ca3af;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.55;
+    transition: opacity .15s ease, background .15s ease, color .15s ease;
+  }
+
+  .freeze-toggle svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+  }
+
+  .freeze-toggle:hover {
+    opacity: 1;
+    color: #4b5563;
+    background: #eef0f3;
+  }
+
+  .freeze-toggle.active {
+    color: #2563eb;
+    background: #dbeafe;
+    opacity: 1;
+  }
+
+  .freeze-toggle.active:hover {
+    background: #bfdbfe;
+  }
+
+  .freeze-toggle.active .lock-body {
+    fill: currentColor;
+  }
+
+  .settings-section {
+    border-top: 1px solid #eef0f3;
+    margin-top: 7px;
+    padding-top: 7px;
+  }
+
+  .settings-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .settings-actions button,
+  .path-chip {
+    padding: 6px 7px;
+    font-size: 12px;
+  }
+
+  .column-list,
+  .path-list {
+    max-height: 150px;
+    overflow: auto;
+  }
+
+  .path-chip {
+    width: 100%;
+    margin-top: 4px;
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .search-hit {
+    background: #fef08a;
+    border-radius: 3px;
+    padding: 0 1px;
+  }
+
+  .filter-chips {
+    display: none;
+    gap: 6px;
+    padding: 7px 12px;
+    background: #fff;
+    border-bottom: 1px solid #eef0f3;
+    flex-wrap: wrap;
+  }
+
+  .filter-chips.active {
+    display: flex;
+  }
+
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 260px;
+    padding: 4px 7px;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    color: #1d4ed8;
+    background: #eff6ff;
+    font-size: 12px;
+  }
+
+  .filter-chip-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .filter-chip-remove {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    color: #1d4ed8;
+    background: transparent;
+    line-height: 1;
+  }
+
+  .filter-chip-remove:hover {
+    background: #dbeafe;
+  }
+
+  .value-th-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  .tree-menu-btn {
+    width: 26px;
+    height: 22px;
+    padding: 0;
+    border-radius: 5px;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+    background: #eff6ff;
+    font-size: 13px;
+    line-height: 1;
+  }
+
+  .tree-menu-btn:hover {
+    background: #dbeafe;
+  }
+
+  .tree-menu {
+    position: fixed;
+    width: 150px;
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16);
+    z-index: 9999;
+  }
+
+  .tree-action {
+    border: 0;
+    border-radius: 6px;
+    padding: 7px 8px;
+    text-align: left;
+    font-size: 12px;
+    background: #fff;
+  }
+
+  .tree-action:hover {
+    background: #f3f4f6;
+  }
+
+  .content {
+    flex: 1;
+    overflow: auto;
+    padding: 12px;
+  }
+
+  table.grid {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+  }
+
+  table.grid th,
+  table.grid td {
+    border-bottom: 1px solid #eef0f3;
+    border-right: 1px solid #eef0f3;
+    padding: 8px 10px;
+    vertical-align: top;
+    word-break: break-word;
+  }
+
+  table.grid th {
+    padding-right: 18px;
+  }
+
+  table.grid th:last-child,
+  table.grid td:last-child {
+    border-right: 0;
+  }
+
+  table.grid th {
+    background: #f3f4f6;
+    text-align: left;
+    font-size: 12px;
+    color: #4b5563;
+    min-width: 80px;
+  }
+
+  .content.freeze-header table.root-grid > thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+
+  table.grid .key-col,
+  table.grid .type-col,
+  table.grid .index-col {
+    width: 1%;
+    white-space: nowrap;
+  }
+
+  table.grid .key-col {
+    min-width: 90px;
+  }
+
+  table.grid .type-col {
+    min-width: 72px;
+  }
+
+  table.grid .value-col {
+    width: auto;
+  }
+
+  /* Frozen columns stick to the left edge of the nearest scroll container.
+     Applies to root AND nested grids so nested tables can freeze columns too.
+     Backgrounds are CSS-only so dynamic row/zebra/selected backgrounds (added
+     later) won't be clobbered by inline styles (L6). */
+  table.grid th.frozen-col,
+  table.grid td.frozen-col {
+    position: sticky;
+    left: 0;
+  }
+
+  table.grid thead th.frozen-col {
+    background: #f3f4f6;
+  }
+
+  table.grid tbody td.frozen-col {
+    background: #fff;
+  }
+
+  table.grid.nested-grid th {
+    position: static;
+    top: auto;
+    z-index: auto;
+    background: #f3f4f6;
+  }
+
+  table.grid.nested-grid td:first-child {
+    position: static;
+    left: auto;
+    z-index: auto;
+  }
+
+  table.grid.nested-grid th:first-child {
+    position: static;
+    left: auto;
+    z-index: auto;
+  }
+
+  /* Frozen columns must beat the nested-grid static resets above (equal
+     specificity, later source order wins) so a frozen nested column still
+     sticks instead of being reset to static. */
+  table.grid.nested-grid th.frozen-col,
+  table.grid.nested-grid td.frozen-col {
+    position: sticky;
+    left: 0;
+    z-index: 8;
+  }
+
+  .col-resizer {
+    position: absolute;
+    top: 0;
+    right: -3px;
+    width: 7px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 4;
+  }
+
+  .col-resizer:hover {
+    background: rgba(37, 99, 235, 0.16);
+  }
+
+  body.resizing-col {
+    cursor: col-resize;
+    user-select: none;
+  }
+    .th-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: flex-start;
+  }
+
+  .th-left {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .th-title {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .th-title:hover {
+    background: transparent;
+    color: #2563eb;
+    text-decoration: underline;
+  }
+
+  .sort-mark {
+    color: #2563eb;
+    font-size: 11px;
+  }
+
+  .filter-btn {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .filter-btn svg {
+    width: 13px;
+    height: 13px;
+    display: block;
+  }
+
+  .filter-btn.active {
+    color: #fff;
+    background: #2563eb;
+    border-color: #2563eb;
+  }
+
+  .col-freeze-btn {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    background: transparent;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .col-freeze-btn svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+  }
+
+  .col-freeze-btn:hover {
+    color: #4b5563;
+    background: #eef0f3;
+  }
+
+  .col-freeze-btn.active {
+    color: #fff;
+    background: #2563eb;
+    border-color: #2563eb;
+  }
+
+  .filter-menu {
+    position: fixed;
+    top: -9999px;
+    left: -9999px;
+    right: auto;
+    width: 260px;
+    max-height: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.20);
+    z-index: 10050;
+    color: #172033;
+    visibility: hidden;
+  }
+
+  .filter-menu input[type="text"],
+  .filter-menu select {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 12px;
+    background: #fff;
+  }
+
+  .filter-condition {
+    display: grid;
+    grid-template-columns: 108px 1fr;
+    gap: 6px;
+  }
+
+  .filter-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .filter-actions button {
+    flex: 1;
+    padding: 5px 6px;
+    font-size: 12px;
+  }
+
+  .value-list {
+    max-height: 180px;
+    overflow: auto;
+    border: 1px solid #eef0f3;
+    border-radius: 8px;
+  }
+
+  .check-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-bottom: 1px solid #f1f3f5;
+    font-weight: 400;
+    color: #172033;
+  }
+
+  .check-row:last-child {
+    border-bottom: 0;
+  }
+
+  .check-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .check-count {
+    color: #6b7280;
+    font-size: 11px;
+  }
+
+  .type {
+    color: #6b7280;
+    font-size: 12px;
+  }
+
+  .number-value,
+  .type-number {
+    font-weight: 700;
+  }
+
+  .key-jump {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: #2563eb;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .key-jump:hover {
+    text-decoration: underline;
+    background: transparent;
+  }
+
+  .json-string-badge,
+  .json-parse-warn-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 5px;
+    padding: 1px 5px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .json-string-badge {
+    color: #166534;
+    background: #dcfce7;
+  }
+
+  .json-parse-warn-badge {
+    color: #92400e;
+    background: #fef3c7;
+  }
+
+  .summary-main {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .node-actions {
+    display: inline-flex;
+    gap: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  .node-action {
+    padding: 1px 5px;
+    border-radius: 5px;
+    font-size: 11px;
+    color: #4b5563;
+    background: #fff;
+  }
+
+  .node-action:hover {
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+    background: #eff6ff;
+  }
+
+  .node-action[disabled] {
+    display: none;
+  }
+
+  details {
+    margin: 0;
+  }
+
+  summary {
+    cursor: pointer;
+    color: #2563eb;
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .muted {
+    color: #6b7280;
+  }
+
+  pre {
+    margin: 0;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .empty {
+    margin-top: 12px;
+    padding: 24px;
+    color: #6b7280;
+    background: #fff;
+    border: 1px dashed #d1d5db;
+    border-radius: 10px;
+  }
+
+  .perf-note {
+    margin: 8px 0;
+    padding: 8px 10px;
+    color: #92400e;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    font-size: 12px;
+  }
+  
+  .path-select {
+    max-width: 260px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 7px 10px;
+    background: #fff;
+  }
+
+  .sticky-context {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    padding: 6px 12px;
+    color: #1f2937;
+    background: rgba(255, 255, 255, .96);
+    border-bottom: 1px solid #dbeafe;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, .08);
+    z-index: 8;
+    font-size: 12px;
+  }
+
+  .sticky-context.active {
+    display: flex;
+  }
+
+  .sticky-context-label {
+    color: #6b7280;
+    font-weight: 600;
+  }
+
+  .sticky-context-path {
+    overflow: hidden;
+    color: #2563eb;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sticky-context-summary {
+    color: #6b7280;
+    white-space: nowrap;
+  }
+
+  .sticky-context button {
+    margin-left: auto;
+    padding: 3px 7px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+
+  .sticky-table-head {
+    position: fixed;
+    display: none;
+    overflow: hidden;
+    background: #f3f4f6;
+    border-bottom: 1px solid #dbe3ef;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, .06);
+    z-index: 40;
+  }
+
+  .sticky-table-head.active {
+    display: block;
+  }
+
+  .sticky-table-head.multi {
+    inset: 0 auto auto 0;
+    width: 100vw !important;
+    height: 100vh !important;
+    overflow: visible;
+    background: transparent;
+    border-bottom: 0;
+    box-shadow: none;
+    pointer-events: none;
+  }
+
+  .sticky-table-head-inner {
+    pointer-events: none;
+  }
+
+  .sticky-head-layer {
+    position: fixed;
+    overflow: hidden;
+    background: #f3f4f6;
+    border: 1px solid #dbe3ef;
+    border-radius: 6px;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, .08);
+    pointer-events: none;
+  }
+
+  .sticky-head-layer-inner {
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .sticky-table-head table {
+    height: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    background: #f3f4f6;
+  }
+
+  .sticky-table-head thead,
+  .sticky-table-head tr {
+    height: 100%;
+  }
+
+  .sticky-table-head th {
+    box-sizing: border-box;
+    height: 100%;
+    border-right: 1px solid #eef0f3;
+    padding: 8px 10px;
+    overflow: hidden;
+    color: #4b5563;
+    background: #f3f4f6;
+    font-size: 12px;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .sticky-table-head .th-wrap,
+  .sticky-table-head .th-left {
+    height: 100%;
+    overflow: hidden;
+    align-items: center;
+  }
+
+  .sticky-table-head .filter-menu,
+  .sticky-table-head .col-resizer {
+    display: none;
+  }
+
+  .toast {
+    position: fixed;
+    right: 14px;
+    bottom: 14px;
+    padding: 8px 10px;
+    color: #fff;
+    background: rgba(15, 23, 42, .9);
+    border-radius: 8px;
+    font-size: 12px;
+    z-index: 10000;
+  }
+</style>
+
+<div class="app">
+  <div class="bar">
+    <div class="title">JSON Table</div>
+    <div class="meta" id="meta"></div>
+    <button id="pathUp" title="上一级路径">上级</button>
+    <select id="pathSelect" class="path-select"></select>
+    <input id="globalSearch" class="search" placeholder="全局搜索">
+    <button id="resetFilters">重置过滤</button>
+    <button id="toggle">原始</button>
+    <div class="settings-wrap" id="settingsWrap">
+      <button id="settingsBtn" class="settings-btn" title="设置" aria-label="设置" aria-expanded="false">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M3 4.5h10M3 11.5h10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <circle cx="6" cy="4.5" r="1.7" fill="#fff" stroke="currentColor" stroke-width="1.2"/>
+          <circle cx="10" cy="11.5" r="1.7" fill="#fff" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+      </button>
+      <div id="settingsMenu" class="settings-menu" hidden>
+        <div class="settings-title">设置</div>
+        <label class="setting-row">
+          <input id="showTypeCheck" type="checkbox">
+          <span>显示 Type 列</span>
+        </label>
+        <label class="setting-row" title="滚动时保持表头行固定在顶部（仅固定行；冻结列请用各列设置里的锁图标）">
+          <input id="freezeHeaderCheck" type="checkbox">
+          <span>固定表头行</span>
+        </label>
+        <label class="setting-row">
+          <input id="showStickyHeaderCheck" type="checkbox">
+          <span>显示层级浮动表头</span>
+        </label>
+        <label class="setting-row">
+          <input id="parseJsonStringCheck" type="checkbox">
+          <span>解析 JSON 字符串</span>
+        </label>
+        <label class="setting-row">
+          <span>浮动表头模式</span>
+          <select id="headerModeSelect" style="margin-left:auto;max-width:96px">
+            <option value="single">单层</option>
+            <option value="multi">多层</option>
+          </select>
+        </label>
+        <div class="settings-section">
+          <div class="settings-title">字段显示</div>
+          <div id="columnSettings" class="column-list"></div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-title">复制 / 导出</div>
+          <div class="settings-actions">
+            <button id="copyPathBtn">复制路径</button>
+            <button id="copyJsonBtn">复制 JSON</button>
+            <button id="exportJsonBtn">导出 JSON</button>
+            <button id="exportCsvBtn">导出 CSV</button>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-title">路径</div>
+          <button id="favPathBtn" class="path-chip">收藏当前路径</button>
+          <div id="pathShortcuts" class="path-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="filter-chips" id="filterChips"></div>
+  <div class="sticky-context" id="stickyContextBar" title="当前滚动层级">
+    <span class="sticky-context-label">当前层级</span>
+    <span class="sticky-context-path" id="stickyContextPath"></span>
+    <span class="sticky-context-summary" id="stickyContextSummary"></span>
+    <button id="stickyContextJump" type="button">定位</button>
+  </div>
+  <div class="sticky-table-head" id="stickyTableHead">
+    <div class="sticky-table-head-inner" id="stickyTableHeadInner"></div>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+
+<script>
+  pm.getData(function (err, data) {
+    var raw = data.raw || "";
+    var content = document.getElementById("content");
+    var stickyContextBar = document.getElementById("stickyContextBar");
+    var stickyContextPath = document.getElementById("stickyContextPath");
+    var stickyContextSummary = document.getElementById("stickyContextSummary");
+    var stickyContextJump = document.getElementById("stickyContextJump");
+    var filterChips = document.getElementById("filterChips");
+    var stickyTableHead = document.getElementById("stickyTableHead");
+    var stickyTableHeadInner = document.getElementById("stickyTableHeadInner");
+    var meta = document.getElementById("meta");
+    var toggle = document.getElementById("toggle");
+    var settingsWrap = document.getElementById("settingsWrap");
+    var settingsBtn = document.getElementById("settingsBtn");
+    var settingsMenu = document.getElementById("settingsMenu");
+    var showTypeCheck = document.getElementById("showTypeCheck");
+    var freezeHeaderCheck = document.getElementById("freezeHeaderCheck");
+    var showStickyHeaderCheck = document.getElementById("showStickyHeaderCheck");
+    var parseJsonStringCheck = document.getElementById("parseJsonStringCheck");
+    var headerModeSelect = document.getElementById("headerModeSelect");
+    var columnSettings = document.getElementById("columnSettings");
+    var copyPathBtn = document.getElementById("copyPathBtn");
+    var copyJsonBtn = document.getElementById("copyJsonBtn");
+    var exportJsonBtn = document.getElementById("exportJsonBtn");
+    var exportCsvBtn = document.getElementById("exportCsvBtn");
+    var favPathBtn = document.getElementById("favPathBtn");
+    var pathShortcuts = document.getElementById("pathShortcuts");
+    var globalSearch = document.getElementById("globalSearch");
+    var resetFilters = document.getElementById("resetFilters");
+    var pathSelect = document.getElementById("pathSelect");
+    var pathUp = document.getElementById("pathUp");
+
+    var showTable = true;
+    var showTypeColumn = false;
+    var json;
+    var tableRows = null;
+    var tablePath = "$";
+    var selectedPath = "$";
+    var nodesByPath = {};
+    var columnFilters = {};
+    var activeFilterColumn = null;
+    var sortState = { col: null, dir: null };
+    var columnWidths = {};
+    var hiddenColumnsByPath = {};
+    var frozenColumnsByPath = {};
+    var pendingFreezeFirstCol = false;
+    var renderedNodesByPath = {};
+    var parseFailureSamples = {};
+    var currentAllColumns = [];
+    var currentColumns = [];
+    var currentRows = [];
+    var recentPaths = ["$"];
+    var favoritePaths = {};
+    var MAX_RENDER_ROWS = 2000;
+    var treeMenuOpen = false;
+    var activeTreeTable = null;
+    var activeTreeColumnIndex = -1;
+    var expandedDetailPaths = {};
+    var suppressDetailToggle = false;
+    var stickyContextPathValue = "";
+    var stickyContextTicking = false;
+    var stickyTableHeadKey = "";
+    var stickyHeaderMode = "single";
+    var showStickyHeader = true;
+    var parseJsonString = true;
+    var freezeHeader = false;
+    var STORAGE_KEY = "apifox-json-table-state-v2";
+    var LARGE_JSON_CHARS = 500000;
+    var LARGE_SEARCH_CHARS = 250000;
+
+    try {
+      json = JSON.parse(raw);
+    } catch (e) {
+      meta.textContent = "非 JSON 响应";
+      content.innerHTML = "<pre></pre>";
+      content.querySelector("pre").textContent = raw;
+      return;
+    }
+
+    function esc(v) {
+      return String(v)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function safeStorageGet(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+
+    function safeStorageSet(key, value) {
+      try { localStorage.setItem(key, value); } catch (e) {}
+    }
+
+    function isPlainObject(v) {
+      return v && typeof v === "object" && !Array.isArray(v);
+    }
+
+    function loadPersistedState() {
+      var saved = safeStorageGet(STORAGE_KEY);
+      if (!saved) return;
+
+      try {
+        var state = JSON.parse(saved);
+        if (!isPlainObject(state)) return;
+
+        showTypeColumn = !!state.showTypeColumn;
+        freezeHeader = !!state.freezeHeader;
+        showStickyHeader = state.showStickyHeader !== false;
+        parseJsonString = state.parseJsonString !== false;
+        stickyHeaderMode = state.stickyHeaderMode === "multi" ? "multi" : "single";
+        columnWidths = isPlainObject(state.columnWidths) ? state.columnWidths : {};
+        hiddenColumnsByPath = isPlainObject(state.hiddenColumnsByPath) ? state.hiddenColumnsByPath : {};
+        var hadFrozenColumns = Object.prototype.hasOwnProperty.call(state, "frozenColumnsByPath");
+        frozenColumnsByPath = isPlainObject(state.frozenColumnsByPath) ? state.frozenColumnsByPath : {};
+        favoritePaths = isPlainObject(state.favoritePaths) ? state.favoritePaths : {};
+        recentPaths = Array.isArray(state.recentPaths) && state.recentPaths.length ? state.recentPaths.slice(0, 6) : recentPaths;
+        if (state.freezeHeader && !hadFrozenColumns) pendingFreezeFirstCol = true;
+      } catch (e) {}
+    }
+
+    function savePersistedState() {
+      safeStorageSet(STORAGE_KEY, JSON.stringify({
+        showTypeColumn: showTypeColumn,
+        freezeHeader: freezeHeader,
+        showStickyHeader: showStickyHeader,
+        parseJsonString: parseJsonString,
+        stickyHeaderMode: stickyHeaderMode,
+        columnWidths: columnWidths,
+        hiddenColumnsByPath: hiddenColumnsByPath,
+        frozenColumnsByPath: frozenColumnsByPath,
+        favoritePaths: favoritePaths,
+        recentPaths: recentPaths
+      }));
+    }
+        function isObj(v) {
+      return v && typeof v === "object" && !Array.isArray(v);
+    }
+
+    function highlightText(text) {
+      var rawText = String(text);
+      var q = globalSearch.value.trim();
+      if (!q) return esc(rawText);
+
+      var lower = rawText.toLowerCase();
+      var needle = q.toLowerCase();
+      var html = "";
+      var from = 0;
+      var index = lower.indexOf(needle);
+
+      while (index >= 0) {
+        html += esc(rawText.slice(from, index));
+        html += '<span class="search-hit">' + esc(rawText.slice(index, index + q.length)) + '</span>';
+        from = index + q.length;
+        index = lower.indexOf(needle, from);
+      }
+
+      return html + esc(rawText.slice(from));
+    }
+
+    function typeOf(v) {
+      if (Array.isArray(v)) return "array";
+      if (v === null) return "null";
+      return typeof v;
+    }
+
+    function valueText(v) {
+      if (v === undefined) return "";
+      if (v === null) return "null";
+      if (typeof v === "string") return v;
+      if (typeof v === "number" || typeof v === "boolean") return String(v);
+      return JSON.stringify(v);
+    }
+
+    function summarize(v) {
+      if (v === undefined) return "";
+      if (v === null) return "null";
+      if (Array.isArray(v)) return "[" + v.length + " items]";
+      if (isObj(v)) return "{" + Object.keys(v).length + " keys}";
+      return String(v);
+    }
+
+    function tryParseJsonStringValue(v) {
+      if (!parseJsonString || typeof v !== "string") return null;
+
+      var text = v.trim();
+      if (!text || (text[0] !== "{" && text[0] !== "[")) return null;
+
+      try {
+        var parsed = JSON.parse(text);
+        return parsed && typeof parsed === "object" ? parsed : null;
+      } catch (e) {
+        parseFailureSamples[text.slice(0, 120)] = true;
+        return null;
+      }
+    }
+
+    function isRecordArray(v) {
+      return Array.isArray(v) && v.length > 0 && v.every(function (item) {
+        return isObj(item);
+      });
+    }
+
+    function collectColumns(rows) {
+      var cols = [];
+      rows.forEach(function (row) {
+        if (!isObj(row)) return;
+        Object.keys(row).forEach(function (k) {
+          if (cols.indexOf(k) < 0) cols.push(k);
+        });
+      });
+      return cols;
+    }
+
+    function getHiddenColumns(path) {
+      hiddenColumnsByPath[path] = hiddenColumnsByPath[path] || {};
+      return hiddenColumnsByPath[path];
+    }
+
+    function getVisibleColumns(cols, path) {
+      var hidden = getHiddenColumns(path);
+      var visible = cols.filter(function (col) {
+        return !hidden[col];
+      });
+      return visible.length ? visible : cols;
+    }
+
+    function setColumnVisible(path, col, visible) {
+      var hidden = getHiddenColumns(path);
+      if (visible) {
+        delete hidden[col];
+      } else {
+        hidden[col] = true;
+      }
+      savePersistedState();
+      render();
+    }
+
+    function getFrozenColumns(path) {
+      // Read-only: never create an entry on read, otherwise every visited
+      // table path (especially nested ones) pollutes frozenColumnsByPath and
+      // gets persisted to localStorage indefinitely (L1).
+      return frozenColumnsByPath[path] || {};
+    }
+
+    function ensureFrozenColumns(path) {
+      if (!frozenColumnsByPath[path]) frozenColumnsByPath[path] = {};
+      return frozenColumnsByPath[path];
+    }
+
+    function isColumnFrozen(path, col) {
+      return !!getFrozenColumns(path)[col];
+    }
+
+    function setColumnFrozen(path, col, frozen) {
+      var frozenSet = ensureFrozenColumns(path);
+      if (frozen) {
+        frozenSet[col] = true;
+      } else {
+        delete frozenSet[col];
+      }
+      // L9: warn when freezing leaves no non-frozen column on the root table —
+      // once every column is pinned to the left edge, horizontal scrolling
+      // becomes useless.
+      if (frozen && path === tablePath) {
+        var visible = getVisibleColumns(currentAllColumns, path);
+        if (visible.length && visible.every(function (c) { return frozenSet[c]; })) {
+          showToast("已冻结全部列，横向滚动将失效（建议至少保留一列非冻结）");
+        }
+      }
+      savePersistedState();
+      render();
+    }
+
+    function findFirstRecordArray(v, path) {
+      if (isRecordArray(v)) {
+        return { rows: v, path: path || "$" };
+      }
+
+      if (Array.isArray(v)) {
+        for (var i = 0; i < v.length; i++) {
+          var foundInArray = findFirstRecordArray(v[i], (path || "$") + "[" + i + "]");
+          if (foundInArray) return foundInArray;
+        }
+      }
+
+      if (isObj(v)) {
+        var keys = Object.keys(v);
+        for (var j = 0; j < keys.length; j++) {
+          var key = keys[j];
+          var foundInObject = findFirstRecordArray(v[key], (path || "$") + "." + key);
+          if (foundInObject) return foundInObject;
+        }
+      }
+
+      return null;
+    }
+
+    function buildPathOptions(v, path) {
+      nodesByPath[path] = v;
+
+      // 路径选择只展示可作为根路径的字段路径。
+      // 数组本身可以选中，例如 $.list；但不要继续展开 $.list[0] / $.list[1]。
+      if (Array.isArray(v)) {
+        return;
+      }
+
+      if (isObj(v)) {
+        Object.keys(v).forEach(function (key) {
+          var child = v[key];
+          if (child && typeof child === "object") {
+            buildPathOptions(child, path + "." + key);
+          }
+        });
+      }
+    }
+
+    function refreshPathSelect() {
+      var paths = Object.keys(nodesByPath);
+      var html = "";
+
+      paths.forEach(function (path) {
+        var node = nodesByPath[path];
+        var selected = path === selectedPath ? " selected" : "";
+        html += '<option value="' + esc(path) + '" title="' + esc(summarize(node)) + '"' + selected + '>' + esc(path) + '</option>';
+      });
+
+      pathSelect.innerHTML = html;
+    }
+
+    function setRootPath(path) {
+      if (!Object.prototype.hasOwnProperty.call(nodesByPath, path)) return;
+
+      selectedPath = path;
+      pathSelect.value = path;
+      addRecentPath(path);
+      currentAllColumns = [];
+      currentColumns = [];
+      currentRows = [];
+      expandedDetailPaths = {};
+      columnFilters = {};
+      sortState = { col: null, dir: null };
+      activeFilterColumn = null;
+      treeMenuOpen = false;
+      globalSearch.value = "";
+      render({ preserveDetails: false });
+    }
+
+    function getPathCrumbs(path) {
+      var crumbs = [{ label: "$", path: "$" }];
+      if (!path || path === "$") return crumbs;
+
+      var current = "$";
+      path.slice(2).split(".").forEach(function (part) {
+        current += "." + part;
+        crumbs.push({ label: part, path: current });
+      });
+
+      return crumbs;
+    }
+
+    function renderMetaPath(path) {
+      return '<span class="meta-path">' + getPathCrumbs(path).map(function (crumb, index) {
+        var sep = index === 0 ? "" : '<span class="meta-path-sep">.</span>';
+        var disabled = Object.prototype.hasOwnProperty.call(nodesByPath, crumb.path) ? "" : " disabled";
+        return sep + '<button class="meta-path-btn" data-path="' + esc(crumb.path) + '"' + disabled + '>' + esc(crumb.label) + '</button>';
+      }).join("") + '</span>';
+    }
+
+    function parentPath(path) {
+      if (!path || path === "$" || path.indexOf(".") < 0) return "$";
+      return path.slice(0, path.lastIndexOf("."));
+    }
+
+    function addRecentPath(path) {
+      recentPaths = [path].concat(recentPaths.filter(function (item) {
+        return item !== path;
+      })).slice(0, 6);
+      savePersistedState();
+    }
+
+    function toggleFavoritePath(path) {
+      if (favoritePaths[path]) {
+        delete favoritePaths[path];
+      } else {
+        favoritePaths[path] = true;
+      }
+      savePersistedState();
+      updateSettingsPanel();
+    }
+
+    function setMeta(html) {
+      meta.innerHTML = html;
+      Array.prototype.forEach.call(meta.querySelectorAll(".meta-path-btn"), function (btn) {
+        btn.onclick = function (event) {
+          event.stopPropagation();
+          setRootPath(btn.getAttribute("data-path"));
+        };
+      });
+    }
+
+    function isIndexContextPath(path) {
+      return /[d+]$/.test(path || "");
+    }
+
+    function getContextName(path) {
+      if (!path || path === "$") return "$";
+
+      var base = String(path).replace(/([d+])+$/g, "");
+      var keyMatch = base.match(/.([^.[]+)$/);
+      if (keyMatch) return keyMatch[1];
+
+      var indexMatch = String(path).match(/([d+])$/);
+      return indexMatch ? indexMatch[1] : path;
+    }
+
+    function hideStickyTableHead() {
+      stickyTableHeadKey = "";
+      stickyTableHead.classList.remove("active");
+      stickyTableHead.classList.remove("multi");
+      stickyTableHeadInner.innerHTML = "";
+      stickyTableHeadInner.style.marginLeft = "0px";
+      stickyTableHeadInner.style.width = "auto";
+      stickyTableHead.style.left = "0px";
+      stickyTableHead.style.top = "0px";
+      stickyTableHead.style.width = "0px";
+      stickyTableHead.style.height = "0px";
+      stickyTableHeadInner.style.height = "auto";
+    }
+
+    function hideStickyContextBar() {
+      stickyContextPathValue = "";
+      stickyContextBar.classList.remove("active");
+      stickyContextPath.textContent = "";
+      stickyContextSummary.textContent = "";
+      hideStickyTableHead();
+    }
+
+    function getActiveContextDetails() {
+      var contentRect = content.getBoundingClientRect();
+      var top = getRootHeaderMetrics(contentRect).bottom + 2;
+      var candidates = [];
+
+      Array.prototype.forEach.call(content.querySelectorAll("details[data-path][open]"), function (item) {
+        var body = item.querySelector(":scope > .detail-body");
+        if (!body) return;
+
+        var itemRect = item.getBoundingClientRect();
+        if (itemRect.top <= top && itemRect.bottom > top + 8) {
+          candidates.push(item);
+        }
+      });
+
+      if (!candidates.length) return [];
+
+      var namedCandidates = candidates.filter(function (item) {
+        return !isIndexContextPath(item.getAttribute("data-path"));
+      });
+      var pool = namedCandidates.length ? namedCandidates : candidates;
+
+      pool.sort(function (a, b) {
+        return Number(a.getAttribute("data-depth") || 0) - Number(b.getAttribute("data-depth") || 0);
+      });
+      return pool;
+    }
+
+    function findActiveContextDetail() {
+      var items = getActiveContextDetails();
+      return items.length ? items[items.length - 1] : null;
+    }
+
+    function getContextTable(item) {
+      var body = item && item.querySelector(":scope > .detail-body");
+      if (!body) return null;
+      return body.querySelector("table.grid");
+    }
+
+    function cloneTableHead(table, tableRect, contentRect) {
+      var head = table && table.tHead;
+      if (!head || !head.rows.length) return "";
+
+      var widths = Array.prototype.map.call(head.rows[0].cells, function (cell) {
+        return Math.max(48, Math.round(cell.getBoundingClientRect().width));
+      });
+      var totalWidth = Math.max(Math.round(tableRect.width), widths.reduce(function (sum, width) {
+        return sum + width;
+      }, 0));
+
+      var html = '<table style="width:' + totalWidth + 'px"><colgroup>';
+      widths.forEach(function (width) {
+        html += '<col style="width:' + width + 'px">';
+      });
+      html += '</colgroup><thead>' + head.innerHTML + '</thead></table>';
+      return html;
+    }
+
+    function getRootHeaderMetrics(contentRect) {
+      var rootHead = content.querySelector("table.root-grid > thead");
+      if (!rootHead) return { bottom: contentRect.top, height: 36 };
+
+      var rect = rootHead.getBoundingClientRect();
+      var height = Math.max(28, Math.round(rect.height || 36));
+      if (rect.bottom <= contentRect.top || rect.top > contentRect.top + 4) {
+        return { bottom: contentRect.top, height: height };
+      }
+      return { bottom: rect.bottom, height: height };
+    }
+
+    function tableHeaderSignature(table) {
+      var row = table && table.tHead && table.tHead.rows[0];
+      if (!row) return "";
+
+      return Array.prototype.map.call(row.cells, function (cell) {
+        return cell.getAttribute("data-col-key") || cell.textContent.trim();
+      }).join("|");
+    }
+
+    function getStickyHeadMetrics(item, contentRect, minTop) {
+      var table = getContextTable(item);
+      var tableRect = table ? table.getBoundingClientRect() : null;
+      var head = table && table.tHead;
+      var headRect = head ? head.getBoundingClientRect() : null;
+      var headHeight = headRect ? Math.max(28, Math.round(headRect.height || 36)) : 36;
+      if (!tableRect || !headRect || headRect.top > minTop || tableRect.bottom <= minTop + headHeight) return null;
+
+      var left = Math.max(contentRect.left, tableRect.left);
+      var width = Math.min(tableRect.right, contentRect.right) - left;
+      if (width <= 0) return null;
+
+      return { table: table, tableRect: tableRect, height: headHeight, left: left, width: width };
+    }
+
+    function renderStickyHeadLayer(metric, top) {
+      var left = Math.round(metric.left);
+      var width = Math.round(metric.width);
+      var height = Math.round(metric.height);
+      var marginLeft = Math.round(metric.tableRect.left - metric.left);
+      var tableWidth = Math.round(metric.tableRect.width);
+
+      return '<div class="sticky-head-layer" style="left:' + left + 'px;top:' + Math.round(top) +
+        'px;width:' + width + 'px;height:' + height + 'px">' +
+        '<div class="sticky-head-layer-inner" style="margin-left:' + marginLeft + 'px;width:' + tableWidth +
+        'px;height:' + height + 'px">' + cloneTableHead(metric.table, metric.tableRect) + '</div></div>';
+    }
+
+    function updateSingleStickyTableHead(item) {
+      var contentRect = content.getBoundingClientRect();
+      var rootHeader = getRootHeaderMetrics(contentRect);
+      var metric = getStickyHeadMetrics(item, contentRect, rootHeader.bottom);
+      if (!metric) {
+        hideStickyTableHead();
+        return;
+      }
+
+      var key = (item.getAttribute("data-path") || "") + "::" + Math.round(metric.tableRect.left) +
+        "::" + Math.round(metric.tableRect.width) + "::" + content.scrollLeft + "::single";
+      if (stickyTableHeadKey !== key) {
+        stickyTableHeadInner.innerHTML = cloneTableHead(metric.table, metric.tableRect);
+        stickyTableHeadKey = key;
+      }
+
+      stickyTableHead.classList.remove("multi");
+      stickyTableHead.style.left = Math.round(metric.left) + "px";
+      stickyTableHead.style.top = Math.round(rootHeader.bottom) + "px";
+      stickyTableHead.style.width = Math.round(metric.width) + "px";
+      stickyTableHead.style.height = Math.round(metric.height) + "px";
+      stickyTableHeadInner.style.height = Math.round(metric.height) + "px";
+      stickyTableHeadInner.style.marginLeft = Math.round(metric.tableRect.left - metric.left) + "px";
+      stickyTableHeadInner.style.width = Math.round(metric.tableRect.width) + "px";
+      stickyTableHead.classList.add("active");
+    }
+
+    function updateMultiStickyTableHead() {
+      var contentRect = content.getBoundingClientRect();
+      var rootHeader = getRootHeaderMetrics(contentRect);
+      var items = getActiveContextDetails();
+      var seen = {};
+      var layers = [];
+      var top = rootHeader.bottom;
+
+      items.forEach(function (item) {
+        var metric = getStickyHeadMetrics(item, contentRect, rootHeader.bottom);
+        var signature = metric ? tableHeaderSignature(metric.table) : "";
+        if (!metric || !signature || seen[signature]) return;
+
+        seen[signature] = true;
+        if (top + metric.height > contentRect.bottom) return;
+        layers.push(renderStickyHeadLayer(metric, top));
+        top += metric.height + 6;
+      });
+
+      if (!layers.length) {
+        hideStickyTableHead();
+        return;
+      }
+
+      var key = layers.join("") + "::multi";
+      if (stickyTableHeadKey !== key) {
+        stickyTableHeadInner.innerHTML = layers.join("");
+        stickyTableHeadKey = key;
+      }
+
+      stickyTableHead.classList.add("multi");
+      stickyTableHead.style.left = "0px";
+      stickyTableHead.style.top = "0px";
+      stickyTableHead.style.width = "100vw";
+      stickyTableHead.style.height = "100vh";
+      stickyTableHeadInner.style.marginLeft = "0px";
+      stickyTableHeadInner.style.width = "100vw";
+      stickyTableHeadInner.style.height = "100vh";
+      stickyTableHead.classList.add("active");
+    }
+
+    function updateStickyTableHead(item) {
+      if (stickyHeaderMode === "multi") {
+        updateMultiStickyTableHead();
+        return;
+      }
+
+      updateSingleStickyTableHead(item);
+    }
+
+    function updateStickyOffsets() {
+      var rootHead = content.querySelector("table.root-grid > thead");
+      var height = rootHead ? Math.max(28, Math.round(rootHead.getBoundingClientRect().height || 36)) : 36;
+      content.style.setProperty("--root-head-height", height + "px");
+    }
+
+    function updateStickyContextBar() {
+      stickyContextTicking = false;
+      if (!showTable) {
+        hideStickyContextBar();
+        return;
+      }
+
+      if (!showStickyHeader) {
+        hideStickyContextBar();
+        return;
+      }
+
+      var item = findActiveContextDetail();
+      if (!item) {
+        hideStickyContextBar();
+        return;
+      }
+
+      var path = item.getAttribute("data-path") || "";
+      var summary = item.getAttribute("data-context-summary") || "";
+      stickyContextPathValue = path;
+      stickyContextPath.textContent = getContextName(path);
+      stickyContextPath.title = path;
+      stickyContextSummary.textContent = summary ? "· " + summary : "";
+      stickyContextBar.title = path;
+      stickyContextBar.classList.add("active");
+      updateStickyTableHead(item);
+    }
+
+    function requestStickyContextUpdate() {
+      if (stickyContextTicking) return;
+      stickyContextTicking = true;
+      requestAnimationFrame(updateStickyContextBar);
+    }
+
+    function bindStickyContextEvents() {
+      content.onscroll = requestStickyContextUpdate;
+      stickyContextJump.onclick = function () {
+        if (!stickyContextPathValue) return;
+
+        var target = null;
+        Array.prototype.some.call(content.querySelectorAll("details[data-path]"), function (item) {
+          if (item.getAttribute("data-path") === stickyContextPathValue) {
+            target = item;
+            return true;
+          }
+          return false;
+        });
+
+        if (!target) return;
+        var summary = target.querySelector(":scope > summary");
+        (summary || target).scrollIntoView({ block: "start" });
+      };
+    }
+
+    function getNodeAtPath(path) {
+      if (!path || path === "$") return json;
+
+      var node = json;
+      var re = /.([^.[]+)|[(d+)]/g;
+      var match;
+      while ((match = re.exec(path)) && node !== undefined && node !== null) {
+        node = match[1] !== undefined ? node[match[1]] : node[Number(match[2])];
+      }
+      return node;
+    }
+
+    function gridClass(tableId) {
+      return "grid " + (tableId === tablePath ? "root-grid" : "nested-grid");
+    }
+
+    function removeExpandedPathTree(path) {
+      Object.keys(expandedDetailPaths).forEach(function (key) {
+        if (key === path || key.indexOf(path + ".") === 0 || key.indexOf(path + "[") === 0) {
+          delete expandedDetailPaths[key];
+        }
+      });
+    }
+
+    function addExpandablePaths(v, path) {
+      if (!hasExpandableValue(v)) return;
+      expandedDetailPaths[path] = true;
+
+      var parsedStringJson = tryParseJsonStringValue(v);
+      if (parsedStringJson) {
+        addExpandablePaths(parsedStringJson, path);
+        return;
+      }
+
+      if (Array.isArray(v)) {
+        v.forEach(function (item, index) {
+          if (hasExpandableValue(item)) addExpandablePaths(item, path + "[" + index + "]");
+        });
+        return;
+      }
+
+      if (isObj(v)) {
+        Object.keys(v).forEach(function (key) {
+          var child = v[key];
+          if (hasExpandableValue(child)) addExpandablePaths(child, path + "." + key);
+        });
+      }
+    }
+
+    function collectSearchExpandedPaths(v, path, q) {
+      var matched = valueText(v).toLowerCase().indexOf(q) >= 0;
+
+      var parsedStringJson = tryParseJsonStringValue(v);
+      if (parsedStringJson) {
+        var parsedMatched = collectSearchExpandedPaths(parsedStringJson, path, q);
+        if (parsedMatched) expandedDetailPaths[path] = true;
+        return matched || parsedMatched;
+      }
+
+      if (Array.isArray(v)) {
+        v.forEach(function (item, index) {
+          var childPath = path + "[" + index + "]";
+          var childMatched = collectSearchExpandedPaths(item, childPath, q);
+          if (childMatched && hasExpandableValue(item)) expandedDetailPaths[childPath] = true;
+          matched = matched || childMatched;
+        });
+        return matched;
+      }
+
+      if (isObj(v)) {
+        Object.keys(v).forEach(function (key) {
+          var child = v[key];
+          var childPath = path + "." + key;
+          var keyMatched = String(key).toLowerCase().indexOf(q) >= 0;
+          var childMatched = collectSearchExpandedPaths(child, childPath, q);
+          if ((keyMatched || childMatched) && hasExpandableValue(child)) expandedDetailPaths[childPath] = true;
+          matched = matched || keyMatched || childMatched;
+        });
+      }
+
+      return matched;
+    }
+
+    function applySearchExpansion() {
+      var q = globalSearch.value.trim().toLowerCase();
+      if (!q) return;
+      expandedDetailPaths = {};
+      collectSearchExpandedPaths(nodesByPath[selectedPath], selectedPath, q);
+    }
+
+    function getPathDepth(path) {
+      if (!path || path === "$") return 0;
+      var normalized = path.replace(/[[^]]+]/g, ".[]");
+      return normalized.split(".").length - 1;
+    }
+
+    function syncExpandedDetailPaths() {
+      Array.prototype.forEach.call(content.querySelectorAll("details[data-path]"), function (item) {
+        var path = item.getAttribute("data-path");
+        if (!path) return;
+        if (item.open) {
+          expandedDetailPaths[path] = true;
+        } else {
+          delete expandedDetailPaths[path];
+        }
+      });
+    }
+
+    function restoreExpandedDetails() {
+      Array.prototype.forEach.call(content.querySelectorAll("details[data-path]"), function (item) {
+        var path = item.getAttribute("data-path");
+        item.open = !!expandedDetailPaths[path];
+      });
+    }
+
+    function bindDetailsToggleEvents() {
+      Array.prototype.forEach.call(content.querySelectorAll("details[data-path]"), function (item) {
+        item.ontoggle = function () {
+          if (suppressDetailToggle) return;
+
+          var path = item.getAttribute("data-path");
+          if (!path) return;
+
+          if (item.open) {
+            expandedDetailPaths[path] = true;
+            if (!item.querySelector(":scope > .detail-body")) {
+              render();
+            }
+            return;
+          }
+
+          delete expandedDetailPaths[path];
+          var body = item.querySelector(":scope > .detail-body");
+          if (body && body.parentNode) body.parentNode.removeChild(body);
+          // Folding can shrink an auto-width column, leaving frozen left
+          // offsets stale (M2). Recompute them.
+          applyFrozenLayout();
+        };
+      });
+    }
+
+    function getTreeColumnIndex(table) {
+      if (activeTreeColumnIndex >= 0) return activeTreeColumnIndex;
+      return table && table.rows && table.rows[0] ? table.rows[0].cells.length - 1 : -1;
+    }
+
+    function getColumnDetails(table, directOnly) {
+      if (!table || !table.tBodies || !table.tBodies.length) return [];
+
+      var details = [];
+      var columnIndex = getTreeColumnIndex(table);
+      Array.prototype.forEach.call(table.tBodies[0].children, function (row) {
+        var cell = row.cells && row.cells[columnIndex];
+        if (!cell) return;
+
+        if (directOnly) {
+          Array.prototype.forEach.call(cell.children, function (child) {
+            if (child.matches && child.matches("details[data-depth]")) details.push(child);
+          });
+        } else {
+          details = details.concat(Array.prototype.slice.call(cell.querySelectorAll("details[data-depth]")));
+        }
+      });
+
+      return details;
+    }
+
+    function getScopedDetails(scope) {
+      var details = getColumnDetails(activeTreeTable, scope === "current");
+      if (!details.length && scope !== "current") {
+        details = Array.prototype.slice.call(content.querySelectorAll("details[data-depth]"));
+      }
+      return details;
+    }
+
+    function applyDetailsOpen(details, open, scope) {
+      suppressDetailToggle = true;
+      try {
+        details.forEach(function (item) {
+          var path = item.getAttribute("data-path");
+          if (!path) return;
+
+          item.open = open;
+          if (open) {
+            if (scope === "all") {
+              addExpandablePaths(getNodeAtPath(path), path);
+            } else {
+              expandedDetailPaths[path] = true;
+            }
+          } else {
+            removeExpandedPathTree(path);
+          }
+        });
+      } finally {
+        setTimeout(function () { suppressDetailToggle = false; }, 0);
+      }
+    }
+
+    function toggleDetailsOpen(scope) {
+      var details = getScopedDetails(scope);
+      var shouldOpen = details.some(function (item) {
+        return !item.open;
+      });
+      applyDetailsOpen(details, shouldOpen, scope);
+      render();
+    }
+
+    function hasExpandableValue(v) {
+      return !!(v && typeof v === "object") || !!tryParseJsonStringValue(v);
+    }
+
+    function treeMenuHtml() {
+      return '<div class="tree-menu">' +
+        '<button class="tree-action" data-scope="current">展开/折叠本层</button>' +
+        '<button class="tree-action" data-scope="all">展开/折叠全部</button>' +
+      '</div>';
+    }
+
+    function closeTreeMenu() {
+      treeMenuOpen = false;
+      activeTreeTable = null;
+      activeTreeColumnIndex = -1;
+      Array.prototype.forEach.call(document.querySelectorAll(".tree-menu"), function (menu) {
+        if (menu.parentNode) menu.parentNode.removeChild(menu);
+      });
+      Array.prototype.forEach.call(content.querySelectorAll(".tree-menu-btn"), function (btn) {
+        btn.setAttribute("aria-expanded", "false");
+      });
+    }
+
+    function colWidthStyle(tableId, colKey) {
+      var width = columnWidths[tableId + "::" + colKey];
+      return width ? ' style="width:' + width + 'px;min-width:' + width + 'px"' : "";
+    }
+
+    function resizeHandleHtml() {
+      return '<span class="col-resizer" title="拖拽调整列宽"></span>';
+    }
+
+    function simpleHeader(label, className, tableId, colKey) {
+      return '<th class="' + className + '" data-col-key="' + esc(colKey) + '"' + colWidthStyle(tableId, colKey) + '>' +
+        '<div class="th-wrap"><span class="th-left"><span class="th-title-static">' + esc(label) + '</span></span></div>' +
+        resizeHandleHtml() + '</th>';
+    }
+
+    function renderValueHeader(hasTreeActions, tableId) {
+      var html = '<th class="value-col" data-col-key="Value"' + colWidthStyle(tableId, "Value") + '>';
+      html += '<div class="value-th-wrap"><span>Value</span>';
+      if (hasTreeActions) {
+        html += '<button class="tree-menu-btn" title="展开/折叠层级" aria-expanded="false">⤢</button>';
+      }
+      html += '</div>' + resizeHandleHtml() + '</th>';
+      return html;
+    }
+
+    function filterIconSvg() {
+      return '<svg viewBox="0 0 16 16" aria-hidden="true">' +
+        '<path d="M2.2 3h11.6L9.4 8.2v4.1l-2.8 1.5V8.2L2.2 3z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>' +
+      '</svg>';
+    }
+
+    function freezeIconSvg() {
+      return '<svg viewBox="0 0 16 16" aria-hidden="true">' +
+        '<path d="M5 7V5.5a3 3 0 0 1 6 0V7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
+        '<path d="M4 7h8a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>' +
+      '</svg>';
+    }
+
+    function sortMark(col) {
+      if (sortState.col !== col) return "";
+      return '<span class="sort-mark">' + (sortState.dir === "asc" ? "↑" : "↓") + '</span>';
+    }
+
+    function bindTreeActionEvents(root) {
+      Array.prototype.forEach.call(root.querySelectorAll(".tree-menu"), function (menu) {
+        menu.onclick = function (event) {
+          event.stopPropagation();
+        };
+      });
+
+      Array.prototype.forEach.call(root.querySelectorAll(".tree-action"), function (btn) {
+        btn.onclick = function (event) {
+          event.stopPropagation();
+          toggleDetailsOpen(btn.getAttribute("data-scope"));
+          closeTreeMenu();
+        };
+      });
+    }
+
+    function positionTreeMenu(btn) {
+      var menu = document.querySelector(".tree-menu");
+      if (!menu) return;
+
+      var rect = btn.getBoundingClientRect();
+      var left = Math.min(rect.left, window.innerWidth - menu.offsetWidth - 8);
+      var top = Math.min(rect.bottom + 6, window.innerHeight - menu.offsetHeight - 8);
+      menu.style.left = Math.max(8, left) + "px";
+      menu.style.top = Math.max(8, top) + "px";
+    }
+
+    function bindTreeMenuEvents() {
+      Array.prototype.forEach.call(content.querySelectorAll(".tree-menu-btn"), function (btn) {
+        btn.onclick = function (event) {
+          event.stopPropagation();
+
+          if (treeMenuOpen) {
+            closeTreeMenu();
+            return;
+          }
+
+          closeTreeMenu();
+          activeFilterColumn = null;
+          activeTreeTable = btn.closest("table.grid");
+          activeTreeColumnIndex = btn.closest("th").cellIndex;
+          document.body.insertAdjacentHTML("beforeend", treeMenuHtml());
+          treeMenuOpen = true;
+          btn.setAttribute("aria-expanded", "true");
+          positionTreeMenu(btn);
+          bindTreeActionEvents(document);
+        };
+      });
+
+      bindTreeActionEvents(document);
+    }
+
+    loadPersistedState();
+    buildPathOptions(json, "$");
+    refreshPathSelect();
+
+    function getValueCounts(rows, col) {
+      var counts = {};
+      rows.forEach(function (row) {
+        var text = valueText(row ? row[col] : undefined);
+        counts[text] = (counts[text] || 0) + 1;
+      });
+      return counts;
+    }
+
+    function globalFilterKey(col) {
+      return "*::" + String(col);
+    }
+
+    function getColumnFilter(tableId, col) {
+      return columnFilters[filterMenuKey(tableId, col)] || columnFilters[globalFilterKey(col)] || {};
+    }
+
+    function hasColumnFilter(filter) {
+      return !!(filter && ((filter.values && filter.values.length) || filter.mode));
+    }
+
+    function formatFilterLabel(key, filter) {
+      if (key === "__global_search__") return "搜索: " + globalSearch.value.trim();
+
+      var parts = key.split("::");
+      var scope = parts[0] === "*" ? "全部" : parts[0];
+      var col = parts.slice(1).join("::");
+      var bits = [];
+      if (filter.values && filter.values.length) bits.push(filter.values.length + " 个值");
+      if (filter.mode && filter.mode !== "all") bits.push(filter.mode + (filter.query ? ": " + filter.query : ""));
+      return col + " · " + bits.join(" · ") + (scope === "全部" ? " · 全部同名" : "");
+    }
+
+    function renderFilterChips() {
+      var chips = [];
+      var q = globalSearch.value.trim();
+      if (q) chips.push({ key: "__global_search__", text: formatFilterLabel("__global_search__", {}) });
+
+      Object.keys(columnFilters).forEach(function (key) {
+        var filter = columnFilters[key];
+        if (hasColumnFilter(filter)) chips.push({ key: key, text: formatFilterLabel(key, filter) });
+      });
+
+      if (!chips.length) {
+        filterChips.classList.remove("active");
+        filterChips.innerHTML = "";
+        return;
+      }
+
+      filterChips.classList.add("active");
+      filterChips.innerHTML = chips.map(function (chip) {
+        return '<span class="filter-chip" title="' + esc(chip.text) + '"><span class="filter-chip-text">' +
+          esc(chip.text) + '</span><button class="filter-chip-remove" data-filter-key="' + esc(chip.key) +
+          '" title="移除过滤条件">×</button></span>';
+      }).join("");
+      bindFilterChipEvents();
+    }
+
+    function bindFilterChipEvents() {
+      Array.prototype.forEach.call(filterChips.querySelectorAll(".filter-chip-remove"), function (btn) {
+        btn.onclick = function (event) {
+          event.stopPropagation();
+          var key = btn.getAttribute("data-filter-key");
+          if (key === "__global_search__") {
+            globalSearch.value = "";
+          } else {
+            delete columnFilters[key];
+          }
+          activeFilterColumn = null;
+          render();
+        };
+      });
+    }
+
+    function getActiveFilterCount() {
+      var count = 0;
+
+      Object.keys(columnFilters).forEach(function (key) {
+        if (hasColumnFilter(columnFilters[key])) count++;
+      });
+
+      if (globalSearch.value.trim()) count++;
+      return count;
+    }
+
+    function conditionMatches(filter, text) {
+      var mode = filter.mode || "all";
+      var q = String(filter.query || "").toLowerCase();
+      var lower = String(text || "").toLowerCase();
+
+      if (mode === "empty") return text === "" || text === "null";
+      if (mode === "notEmpty") return text !== "" && text !== "null";
+      if (!q) return true;
+      if (mode === "contains") return lower.indexOf(q) >= 0;
+      if (mode === "notContains") return lower.indexOf(q) < 0;
+      if (mode === "equals") return lower === q;
+      if (mode === "notEquals") return lower !== q;
+      return true;
+    }
+
+    function rowMatches(row, cols, tableId) {
+      var global = globalSearch.value.trim().toLowerCase();
+
+      if (global) {
+        var wholeRow = cols.map(function (col) {
+          return valueText(row ? row[col] : undefined);
+        }).join(" ").toLowerCase();
+
+        if (wholeRow.indexOf(global) < 0) return false;
+      }
+
+      for (var i = 0; i < cols.length; i++) {
+        var col = cols[i];
+        var filter = getColumnFilter(tableId, col);
+        var text = valueText(row ? row[col] : undefined);
+        var lower = text.toLowerCase();
+
+        if (filter.values && filter.values.length && filter.values.indexOf(text) < 0) {
+          return false;
+        }
+
+        if (!conditionMatches(filter, text)) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    function getFilteredRows(rows, cols, tableId) {
+      return rows.filter(function (row) {
+        return rowMatches(row, cols, tableId);
+      });
+    }
+
+    function compareValues(a, b) {
+      var av = valueText(a);
+      var bv = valueText(b);
+      var an = Number(av);
+      var bn = Number(bv);
+
+      if (av !== "" && bv !== "" && isFinite(an) && isFinite(bn)) {
+        return an === bn ? 0 : an > bn ? 1 : -1;
+      }
+
+      return av.localeCompare(bv, "zh-Hans", { numeric: true });
+    }
+
+    function getSortedRows(rows) {
+      if (!sortState.col || !sortState.dir) return rows;
+
+      return rows.slice().sort(function (a, b) {
+        var result = compareValues(a ? a[sortState.col] : undefined, b ? b[sortState.col] : undefined);
+        return sortState.dir === "asc" ? result : -result;
+      });
+    }
+
+    function toggleSort(col) {
+      if (sortState.col !== col) {
+        sortState = { col: col, dir: "asc" };
+      } else if (sortState.dir === "asc") {
+        sortState.dir = "desc";
+      } else {
+        sortState = { col: null, dir: null };
+      }
+
+      render();
+    }
+
+
+    function expandSearchMatches() {
+      // 展开路径已在渲染前根据原始 JSON 计算；这里保留函数名避免调用链分散。
+    }
+
+    function getDisplayNodeAtPath(path) {
+      if (Object.prototype.hasOwnProperty.call(renderedNodesByPath, path)) return renderedNodesByPath[path];
+      var node = getNodeAtPath(path);
+      return tryParseJsonStringValue(node) || node;
+    }
+
+    function renderNodeActions(path) {
+      return '<span class="node-actions">' +
+        '<button class="node-action" data-node-action="copy-json" data-path="' + esc(path) + '" title="复制当前 JSON">JSON</button>' +
+        '</span>';
+    }
+
+    function bindNodeActionEvents() {
+      Array.prototype.forEach.call(content.querySelectorAll(".node-action"), function (btn) {
+        btn.onclick = function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          var path = btn.getAttribute("data-path");
+          copyText(JSON.stringify(getDisplayNodeAtPath(path), null, 2));
+        };
+      });
+    }
+
+    function renderValue(v, path) {
+      if (v === undefined) return '<span class="muted"></span>';
+      if (v === null) return '<span class="muted">' + highlightText("null") + '</span>';
+      if (typeof v === "string") {
+        var parsedStringJson = tryParseJsonStringValue(v);
+        if (!parsedStringJson) return highlightText(v);
+        return renderExpandableValue(parsedStringJson, path, "", true);
+      }
+      if (typeof v === "number") return '<span class="number-value">' + highlightText(v) + '</span>';
+      if (typeof v === "boolean") return highlightText(v);
+
+      return renderExpandableValue(v, path, "", false);
+    }
+
+    function renderExpandableValue(v, path, prefix, parsedString) {
+      var pathKey = path || "$";
+      var depth = getPathDepth(pathKey);
+      var summary = (prefix || "") + summarize(v);
+      var badge = parsedString ? '<span class="json-string-badge">parsed</span>' : "";
+      var expanded = !!expandedDetailPaths[pathKey];
+      var body = expanded ? '<div class="detail-body">' + renderNode(v, pathKey) + '</div>' : "";
+
+      return '<details data-path="' + esc(pathKey) + '" data-depth="' + depth + '" data-context-summary="' +
+        esc(summary) + '"' + (expanded ? ' open' : '') + '>' +
+        '<summary><span class="summary-main">' + badge + esc(summary) + '</span>' + renderNodeActions(pathKey) + '</summary>' +
+        body +
+        '</details>';
+    }
+
+    function renderKeyCell(key, childPath) {
+      if (!Object.prototype.hasOwnProperty.call(nodesByPath, childPath)) {
+        return highlightText(key);
+      }
+
+      return '<button class="key-jump" data-path="' + esc(childPath) + '" title="切换根路径到 ' +
+        esc(childPath) + '">↪ ' + highlightText(key) + '</button>';
+    }
+
+    function renderObject(obj, path) {
+      var keys = Object.keys(obj);
+      if (!keys.length) return '<div class="empty">{}</div>';
+
+      var tableId = path || "$";
+      var hasTreeActions = keys.some(function (key) {
+        return hasExpandableValue(obj[key]);
+      });
+
+      var html = '<table class="' + gridClass(tableId) + '" data-table-id="' + esc(tableId) + '"><thead><tr>' +
+        simpleHeader("Key", "key-col", tableId, "Key") +
+        (showTypeColumn ? simpleHeader("Type", "type-col", tableId, "Type") : "") +
+        renderValueHeader(hasTreeActions, tableId) + '</tr></thead><tbody>';
+
+      keys.forEach(function (key) {
+        var value = obj[key];
+        var childPath = (path || "$") + "." + key;
+
+        html += '<tr data-row-path="' + esc(childPath) + '">';
+        html += '<td class="key-col" data-copy="' + esc(key) + '">' + renderKeyCell(key, childPath) + '</td>';
+        if (showTypeColumn) {
+          var typeName = typeOf(value);
+          html += '<td class="type type-col' + (typeName === "number" ? " type-number" : "") + '" data-copy="' + esc(typeName) + '">' + esc(typeName) + '</td>';
+        }
+        html += '<td class="value-col" data-copy="' + esc(valueText(value)) + '">' + renderValue(value, childPath) + '</td>';
+        html += '</tr>';
+      });
+
+      html += '</tbody></table>';
+      return html;
+    }
+
+    function filterMenuKey(tableId, col) {
+      return String(tableId || tablePath) + "::" + String(col);
+    }
+
+    function findFilterButtonByKey(menuKey) {
+      var found = null;
+      Array.prototype.some.call(content.querySelectorAll(".filter-btn"), function (btn) {
+        if (btn.getAttribute("data-filter-key") === menuKey) {
+          found = btn;
+          return true;
+        }
+        return false;
+      });
+      return found;
+    }
+
+    function positionFilterMenu() {
+      if (!activeFilterColumn) return;
+
+      var menu = document.body.querySelector(".filter-menu");
+      var btn = findFilterButtonByKey(activeFilterColumn);
+      if (!menu || !btn) return;
+
+      var rect = btn.getBoundingClientRect();
+      var width = Math.max(260, menu.offsetWidth || 260);
+      var height = Math.max(120, menu.offsetHeight || 320);
+      var left = Math.min(rect.left, window.innerWidth - width - 8);
+      var top = rect.bottom + 6;
+
+      if (top + height > window.innerHeight - 8) {
+        top = rect.top - height - 6;
+      }
+
+      menu.style.left = Math.max(8, Math.round(left)) + "px";
+      menu.style.top = Math.max(8, Math.round(top)) + "px";
+      menu.style.visibility = "visible";
+    }
+
+    function renderFilterMenu(col, rows, tableId) {
+      var menuKey = filterMenuKey(tableId, col);
+      if (activeFilterColumn !== menuKey) return "";
+
+      var counts = getValueCounts(rows, col);
+      var values = Object.keys(counts).sort();
+      var filter = getColumnFilter(tableId, col);
+      var scopedKey = filterMenuKey(tableId, col);
+      var globalKey = globalFilterKey(col);
+      var applyAllChecked = !!columnFilters[globalKey] && !columnFilters[scopedKey];
+      var selectedMap = null;
+
+      if (filter.values && filter.values.length) {
+        selectedMap = {};
+        filter.values.forEach(function (v) {
+          selectedMap[v] = true;
+        });
+      }
+
+      var html = '<div class="filter-menu" data-menu-col="' + esc(col) + '" data-table-id="' +
+        esc(tableId || tablePath) + '" data-menu-key="' + esc(scopedKey) + '">';
+      html += '<input type="text" class="menu-search" data-col="' + esc(col) + '" value="" placeholder="搜索过滤项">';
+      html += '<div class="filter-condition">';
+      html += '<select class="condition-mode" data-col="' + esc(col) + '">';
+      html += '<option value="all"' + ((!filter.mode || filter.mode === "all") ? " selected" : "") + '>条件：全部</option>';
+      html += '<option value="contains"' + (filter.mode === "contains" ? " selected" : "") + '>包含</option>';
+      html += '<option value="notContains"' + (filter.mode === "notContains" ? " selected" : "") + '>不包含</option>';
+      html += '<option value="equals"' + (filter.mode === "equals" ? " selected" : "") + '>等于</option>';
+      html += '<option value="notEquals"' + (filter.mode === "notEquals" ? " selected" : "") + '>不等于</option>';
+      html += '<option value="empty"' + (filter.mode === "empty" ? " selected" : "") + '>空值</option>';
+      html += '<option value="notEmpty"' + (filter.mode === "notEmpty" ? " selected" : "") + '>非空</option>';
+      html += '</select>';
+      html += '<input type="text" class="condition-value" data-col="' + esc(col) + '" value="' + esc(filter.query || "") + '" placeholder="条件值">';
+      html += '</div>';
+      html += '<label class="setting-row" style="padding:4px 2px"><input class="apply-all-filter" type="checkbox"' +
+        (applyAllChecked ? ' checked' : '') + '> <span>应用到所有同名字段</span></label>';
+      html += '<div class="filter-actions">';
+      html += '<button class="select-all" data-col="' + esc(col) + '">全选</button>';
+      html += '<button class="select-none" data-col="' + esc(col) + '">清空</button>';
+      html += '</div>';
+      html += '<div class="value-list">';
+
+      values.forEach(function (value) {
+        var checked = !selectedMap || selectedMap[value] ? " checked" : "";
+
+        html += '<label class="check-row" data-filter-text="' + esc(String(value).toLowerCase()) + '">';
+        html += '<input type="checkbox" class="value-check" data-col="' + esc(col) + '" value="' + esc(value) + '"' + checked + '>';
+        html += '<span class="check-label" title="' + esc(value) + '">' + esc(value || "(空)") + '</span>';
+        html += '<span class="check-count">' + counts[value] + '</span>';
+        html += '</label>';
+      });
+
+      html += '</div>';
+      html += '<div class="filter-actions">';
+      html += '<button class="apply-filter" data-col="' + esc(col) + '">应用</button>';
+      html += '<button class="cancel-filter" data-col="' + esc(col) + '">取消</button>';
+      html += '</div>';
+      html += '</div>';
+
+      return html;
+    }
+
+    function renderHeader(col, rows, tableId) {
+      var filter = getColumnFilter(tableId, col);
+      var active = hasColumnFilter(filter);
+      var hasTreeActions = rows.some(function (row) {
+        return hasExpandableValue(row ? row[col] : undefined);
+      });
+      var html = "";
+      var fz = !!getFrozenColumns(tableId)[col];
+
+      html += '<th data-col-key="' + esc(col) + '"' + colWidthStyle(tableId, col) + (fz ? ' class="frozen-col"' : '') + '>';
+      html += '<div class="th-wrap">';
+      html += '<span class="th-left">';
+      html += '<button class="th-title" data-col="' + esc(col) + '" title="点击排序">' + esc(col) + '</button>';
+      html += sortMark(col);
+      html += '<button class="filter-btn' + (active ? " active" : "") + '" data-col="' + esc(col) + '" data-filter-key="' +
+        esc(filterMenuKey(tableId, col)) + '" title="过滤">' + filterIconSvg() + '</button>';
+      if (hasTreeActions) {
+        html += '<button class="tree-menu-btn" title="展开/折叠本列层级" aria-expanded="false">⤢</button>';
+      }
+      // Nested tables have no settings panel, so expose column freezing
+      // directly in the header (root tables keep the settings-panel lock).
+      if (tableId !== tablePath) {
+        html += '<button class="col-freeze-btn' + (fz ? " active" : "") + '" data-table-id="' + esc(tableId) + '" data-col="' + esc(col) + '" title="冻结/解冻此列">' + freezeIconSvg() + '</button>';
+      }
+      html += '</span>';
+      html += renderFilterMenu(col, rows, tableId);
+      html += '</div>';
+      html += resizeHandleHtml();
+      html += '</th>';
+
+      return html;
+    }
+
+    function copyText(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () {
+          showToast("已复制");
+        }).catch(function () {
+          fallbackCopy(text);
+        });
+      } else {
+        fallbackCopy(text);
+      }
+    }
+
+    function fallbackCopy(text) {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+      showToast("已复制");
+    }
+
+    function showToast(text) {
+      var old = document.querySelector(".toast");
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+      var div = document.createElement("div");
+      div.className = "toast";
+      div.textContent = text;
+      document.body.appendChild(div);
+      setTimeout(function () {
+        if (div.parentNode) div.parentNode.removeChild(div);
+      }, 1200);
+    }
+
+    function downloadFile(name, text, type) {
+      var blob = new Blob([text], { type: type || "text/plain" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    }
+
+    function csvEscape(value) {
+      var text = valueText(value);
+      return '"' + text.replace(/"/g, '""') + '"';
+    }
+
+    function rowsToCsv(rows, cols) {
+      var lines = [cols.map(csvEscape).join(",")];
+      rows.forEach(function (row) {
+        lines.push(cols.map(function (col) {
+          return csvEscape(row ? row[col] : undefined);
+        }).join(","));
+      });
+      return lines.join("\n");
+    }
+
+    function getExportRows() {
+      if (currentRows && currentRows.length) return currentRows;
+      var node = nodesByPath[selectedPath];
+      return Array.isArray(node) ? node : [node];
+    }
+
+    function updateSettingsPanel() {
+      showTypeCheck.checked = showTypeColumn;
+      freezeHeaderCheck.checked = freezeHeader;
+      showStickyHeaderCheck.checked = showStickyHeader;
+      parseJsonStringCheck.checked = parseJsonString;
+      headerModeSelect.value = stickyHeaderMode;
+      favPathBtn.textContent = favoritePaths[selectedPath] ? "取消收藏当前路径" : "收藏当前路径";
+      renderColumnSettingsPanel();
+      renderPathShortcuts();
+    }
+
+    function renderColumnSettingsPanel() {
+      if (!currentAllColumns.length) {
+        columnSettings.innerHTML = '<div class="muted" style="padding:6px 8px">当前不是对象数组表格</div>';
+        return;
+      }
+
+      var hidden = getHiddenColumns(tablePath);
+      var frozenSet = getFrozenColumns(tablePath);
+      columnSettings.innerHTML = currentAllColumns.map(function (col) {
+        var checked = hidden[col] ? "" : " checked";
+        var fz = frozenSet[col];
+        var fzIcon = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 7V5.5a3 3 0 0 1 6 0V7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path class="lock-body" d="M4 7h8a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+        return '<div class="setting-row"><label class="col-label"><input class="column-check" type="checkbox" data-col="' + esc(col) + '"' + checked + '><span class="col-name">' + esc(col) + '</span></label><button class="freeze-toggle' + (fz ? " active" : "") + '" data-col="' + esc(col) + '" title="冻结/解冻此列">' + fzIcon + '</button></div>';
+      }).join("");
+    }
+
+    function renderPathShortcuts() {
+      var paths = Object.keys(favoritePaths).concat(recentPaths).filter(function (path, index, arr) {
+        return path && arr.indexOf(path) === index;
+      });
+      if (!paths.length) {
+        pathShortcuts.innerHTML = '<div class="muted" style="padding:6px 8px">暂无路径</div>';
+        return;
+      }
+      pathShortcuts.innerHTML = paths.map(function (path) {
+        var star = favoritePaths[path] ? "★ " : "";
+        return '<button class="path-chip path-shortcut" data-path="' + esc(path) + '" title="' + esc(path) + '">' + star + esc(path) + '</button>';
+      }).join("");
+    }
+
+    function bindSettingsPanelEvents() {
+      Array.prototype.forEach.call(settingsMenu.querySelectorAll(".column-check"), function (input) {
+        input.onchange = function () {
+          setColumnVisible(tablePath, input.getAttribute("data-col"), input.checked);
+        };
+      });
+
+      Array.prototype.forEach.call(settingsMenu.querySelectorAll(".freeze-toggle"), function (btn) {
+        btn.onclick = function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          setColumnFrozen(tablePath, btn.getAttribute("data-col"), !isColumnFrozen(tablePath, btn.getAttribute("data-col")));
+        };
+      });
+
+      Array.prototype.forEach.call(settingsMenu.querySelectorAll(".path-shortcut"), function (btn) {
+        btn.onclick = function (event) {
+          event.preventDefault();
+          setRootPath(btn.getAttribute("data-path"));
+          settingsMenu.hidden = true;
+        };
+      });
+    }
+
+    function bindCopyEvents() {
+      Array.prototype.forEach.call(content.querySelectorAll("td"), function (cell) {
+        cell.ondblclick = function (event) {
+          event.stopPropagation();
+          var value = cell.getAttribute("data-copy");
+          copyText(value !== null ? value : (cell.innerText || cell.textContent || ""));
+        };
+        cell.title = cell.title || "双击复制单元格值";
+      });
+    }
+
+    function bindFilterEvents() {
+      Array.prototype.forEach.call(content.querySelectorAll(".key-jump"), function (btn) {
+        btn.onclick = function (event) {
+          event.stopPropagation();
+          var path = btn.getAttribute("data-path");
+          if (!Object.prototype.hasOwnProperty.call(nodesByPath, path)) return;
+
+          setRootPath(path);
+        };
+      });
+
+      Array.prototype.forEach.call(content.querySelectorAll(".th-title"), function (btn) {
+        btn.onclick = function (event) {
+          event.stopPropagation();
+          closeTreeMenu();
+          activeFilterColumn = null;
+          toggleSort(btn.getAttribute("data-col"));
+        };
+      });
+
+      Array.prototype.forEach.call(content.querySelectorAll(".filter-btn"), function (btn) {
+        btn.onclick = function (event) {
+          event.stopPropagation();
+          var col = btn.getAttribute("data-col");
+          var menuKey = btn.getAttribute("data-filter-key") || col;
+          closeTreeMenu();
+          activeFilterColumn = activeFilterColumn === menuKey ? null : menuKey;
+          render();
+        };
+      });
+
+      requestAnimationFrame(positionFilterMenu);
+
+      Array.prototype.forEach.call(content.querySelectorAll(".filter-menu"), function (menu) {
+        menu.onclick = function (event) {
+          event.stopPropagation();
+        };
+      });
+
+      function applyMenuSearch(menu) {
+        var input = menu.querySelector(".menu-search");
+        var q = input ? input.value.trim().toLowerCase() : "";
+
+        Array.prototype.forEach.call(menu.querySelectorAll(".check-row"), function (row) {
+          var text = row.getAttribute("data-filter-text") || "";
+          row.style.display = !q || text.indexOf(q) >= 0 ? "flex" : "none";
+        });
+      }
+
+      Array.prototype.forEach.call(content.querySelectorAll(".menu-search"), function (input) {
+        input.oninput = function (event) {
+          event.stopPropagation();
+          applyMenuSearch(input.closest(".filter-menu"));
+        };
+
+        input.onkeyup = function (event) {
+          event.stopPropagation();
+          applyMenuSearch(input.closest(".filter-menu"));
+        };
+
+        input.onclick = function (event) {
+          event.stopPropagation();
+        };
+      });
+
+      Array.prototype.forEach.call(content.querySelectorAll(".condition-mode, .condition-value"), function (input) {
+        input.onclick = function (event) { event.stopPropagation(); };
+        input.oninput = function (event) { event.stopPropagation(); };
+      });
+
+      Array.prototype.forEach.call(content.querySelectorAll(".select-all"), function (btn) {
+        btn.onclick = function (event) {
+          event.stopPropagation();
+          var menu = btn.closest(".filter-menu");
+
+          Array.prototype.forEach.call(menu.querySelectorAll(".check-row"), function (row) {
+            if (row.style.display !== "none") {
+              var check = row.querySelector(".value-check");
+              if (check) check.checked = true;
+            }
+          });
+        };
+      });
+
+      Array.prototype.forEach.call(content.querySelectorAll(".select-none"), function (btn) {
+        btn.onclick = function (event) {
+          event.stopPropagation();
+          var menu = btn.closest(".filter-menu");
+
+          Array.prototype.forEach.call(menu.querySelectorAll(".check-row"), function (row) {
+            if (row.style.display !== "none") {
+              var check = row.querySelector(".value-check");
+              if (check) check.checked = false;
+            }
+          });
+        };
+      });
+
+      Array.prototype.forEach.call(content.querySelectorAll(".apply-filter"), function (btn) {
+        btn.onclick = function (event) {
+          event.stopPropagation();
+
+          var col = btn.getAttribute("data-col");
+          var menu = btn.closest(".filter-menu");
+          var checks = Array.prototype.slice.call(menu.querySelectorAll(".value-check"));
+          var modeInput = menu.querySelector(".condition-mode");
+          var queryInput = menu.querySelector(".condition-value");
+          var applyAllInput = menu.querySelector(".apply-all-filter");
+          var mode = modeInput ? modeInput.value : "all";
+          var query = queryInput ? queryInput.value.trim() : "";
+          var tableId = menu.getAttribute("data-table-id") || tablePath;
+          var targetKey = applyAllInput && applyAllInput.checked ? globalFilterKey(col) : filterMenuKey(tableId, col);
+          var oppositeKey = applyAllInput && applyAllInput.checked ? filterMenuKey(tableId, col) : globalFilterKey(col);
+          var selected = checks.filter(function (check) {
+            return check.checked;
+          }).map(function (check) {
+            return check.value;
+          });
+
+          var allCount = checks.length;
+
+          columnFilters[targetKey] = columnFilters[targetKey] || {};
+          delete columnFilters[oppositeKey];
+
+          if (selected.length === allCount) {
+            delete columnFilters[targetKey].values;
+          } else {
+            columnFilters[targetKey].values = selected;
+          }
+
+          if (mode && mode !== "all") {
+            columnFilters[targetKey].mode = mode;
+            columnFilters[targetKey].query = query;
+          } else {
+            delete columnFilters[targetKey].mode;
+            delete columnFilters[targetKey].query;
+          }
+
+          if (!hasColumnFilter(columnFilters[targetKey])) {
+            delete columnFilters[targetKey];
+          }
+
+          activeFilterColumn = null;
+          render();
+        };
+      });
+
+      Array.prototype.forEach.call(content.querySelectorAll(".cancel-filter"), function (btn) {
+        btn.onclick = function (event) {
+          event.stopPropagation();
+          activeFilterColumn = null;
+          render();
+        };
+      });
+
+      // M3 fix: portal the filter menu out of its <th> ancestor's stacking
+      // context. The <th> is position:sticky + z-index, which traps the menu's
+      // z-index:10050 below the app-level .sticky-table-head (z-index 40), so
+      // the floating header could cover the menu. Appending to <body> lets it
+      // sit at the document's top stacking context, above everything. All
+      // handlers above were bound while the menu still lived in content, so
+      // they survive the reparent unchanged.
+      var portalMenu = content.querySelector(".filter-menu");
+      if (portalMenu && portalMenu.parentNode) {
+        document.body.appendChild(portalMenu);
+      }
+    }
+
+    function setColumnWidth(table, index, width) {
+      var tableId = table.getAttribute("data-table-id") || "$";
+      var th = table.tHead && table.tHead.rows[0] && table.tHead.rows[0].cells[index];
+      var colKey = th ? th.getAttribute("data-col-key") || String(index) : String(index);
+      columnWidths[tableId + "::" + colKey] = width;
+
+      Array.prototype.forEach.call(table.rows, function (row) {
+        var cell = row.cells && row.cells[index];
+        if (!cell) return;
+        cell.style.width = width + "px";
+        cell.style.minWidth = width + "px";
+      });
+      // Frozen columns are reordered to the front, so a non-frozen column's
+      // width change never shifts frozen left offsets (H1). Only recompute
+      // when the dragged column is itself frozen.
+      if (th && th.classList.contains("frozen-col")) {
+        applyFrozenLayout();
+      }
+    }
+
+    function applyFrozenLayout() {
+      // Process every grid (root AND nested) so frozen columns in nested
+      // tables are laid out too.
+      var tables = content.querySelectorAll("table.grid");
+      for (var t = 0; t < tables.length; t++) {
+        var table = tables[t];
+        if (!table.tHead || !table.tHead.rows.length) continue;
+        var ths = table.tHead.rows[0].cells;
+        var rows = table.tBodies[0] ? table.tBodies[0].rows : [];
+
+        // Batch 1 — read every frozen column width FIRST. Reads interleaved
+        // with writes force one synchronous reflow per frozen column (H1);
+        // reading them all up front collapses that to a single reflow.
+        var widths = new Array(ths.length);
+        var firstW = -1;
+        for (var i = 0; i < ths.length; i++) {
+          var th = ths[i];
+          if (!th.classList.contains("frozen-col")) {
+            widths[i] = -1;
+            continue;
+          }
+          var w = th.getBoundingClientRect().width;
+          if (firstW < 0) firstW = w;
+          widths[i] = w;
+        }
+
+        // L2: if layout isn't ready (e.g. a backgrounded tab where widths
+        // measure 0), don't paint stale/off-by offsets — wait for the
+        // visibilitychange / ResizeObserver re-run instead.
+        if (firstW <= 0) continue;
+
+        // Batch 2 — write all offsets/z-index. Background is delegated to CSS
+        // (.frozen-col rules) so future row/zebra/selected backgrounds aren't
+        // clobbered by inline styles (L6).
+        var left = 0;
+        for (var j = 0; j < ths.length; j++) {
+          var t2 = ths[j];
+          if (!t2.classList.contains("frozen-col")) continue;
+          t2.style.left = left + "px";
+          t2.style.zIndex = 8;
+          for (var r = 0; r < rows.length; r++) {
+            var td = rows[r].cells[j];
+            if (td) {
+              td.style.left = left + "px";
+              td.style.zIndex = 2;
+            }
+          }
+          left += Math.round(widths[j]);
+        }
+      }
+    }
+
+    var frozenLayoutTicking = false;
+    function scheduleFrozenLayout() {
+      if (frozenLayoutTicking) return;
+      frozenLayoutTicking = true;
+      requestAnimationFrame(function () {
+        applyFrozenLayout();
+        frozenLayoutTicking = false;
+      });
+    }
+
+    window.addEventListener("resize", scheduleFrozenLayout);
+
+    // M1: container/panel resize (e.g. dragging a splitter in a non-iframe
+    // embed) does not fire window.resize, so observe the content box directly.
+    if (typeof ResizeObserver !== "undefined" && content) {
+      var frozenRO = new ResizeObserver(scheduleFrozenLayout);
+      frozenRO.observe(content);
+    }
+
+    // L2: a backgrounded tab throttles rAF and getBoundingClientRect can
+    // return 0 on first paint; recompute offsets when the tab becomes visible.
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) scheduleFrozenLayout();
+    });
+
+    function bindColumnResizeEvents() {
+      Array.prototype.forEach.call(content.querySelectorAll(".col-resizer"), function (handle) {
+        handle.onmousedown = function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+
+          var th = handle.closest("th");
+          var table = handle.closest("table.grid");
+          if (!th || !table) return;
+
+          var index = th.cellIndex;
+          var startX = event.clientX;
+          var startWidth = th.getBoundingClientRect().width;
+          document.body.classList.add("resizing-col");
+
+          var resizeTicking = false;
+          var lastMoveEvent = null;
+          function onMove(moveEvent) {
+            lastMoveEvent = moveEvent;
+            if (resizeTicking) return;
+            resizeTicking = true;
+            requestAnimationFrame(function () {
+              resizeTicking = false;
+              var me = lastMoveEvent;
+              if (!me) return;
+              var width = Math.max(48, Math.round(startWidth + me.clientX - startX));
+              setColumnWidth(table, index, width);
+            });
+          }
+
+          function onUp() {
+            document.body.classList.remove("resizing-col");
+            document.removeEventListener("mousemove", onMove);
+            document.removeEventListener("mouseup", onUp);
+            savePersistedState();
+          }
+
+          document.addEventListener("mousemove", onMove);
+          document.addEventListener("mouseup", onUp);
+        };
+      });
+    }
+
+    function renderRecordArray(arr, path) {
+      var pathKey = path || tablePath;
+      var isRootTable = pathKey === tablePath;
+      var allCols = collectColumns(arr);
+      var cols = getVisibleColumns(allCols, pathKey);
+      // Nested tables now support frozen columns too (previously frozenSet was
+      // forced to null for them), so read the frozen set for every table.
+      var frozenSet = getFrozenColumns(pathKey);
+      // L8: prune frozen flags for columns that no longer exist in the data,
+      // so they don't accumulate as unreachable orphans in persisted state.
+      // Applies to root and nested tables alike.
+      if (frozenSet) {
+        var pruned = false;
+        Object.keys(frozenSet).forEach(function (k) {
+          if (allCols.indexOf(k) < 0) { delete frozenSet[k]; pruned = true; }
+        });
+        if (pruned) savePersistedState();
+      }
+      if (isRootTable && pendingFreezeFirstCol && allCols.length) {
+        frozenSet = ensureFrozenColumns(pathKey);
+        frozenSet[allCols[0]] = true;
+        pendingFreezeFirstCol = false;
+        savePersistedState();
+        // L3: this migration can fire late (e.g. when the root isn't a record
+        // array and the user drills into one via setRootPath). Tell the user so
+        // the suddenly-frozen first column isn't a surprise.
+        showToast("已迁移旧版『冻结表头』为首列冻结");
+      }
+      var renderCols = frozenSet
+        ? cols.filter(function (c) { return frozenSet[c]; }).concat(cols.filter(function (c) { return !frozenSet[c]; }))
+        : cols;
+      var filtered = getFilteredRows(arr, allCols, pathKey);
+      var sortedRows = getSortedRows(filtered);
+      var visibleRows = sortedRows.slice(0, MAX_RENDER_ROWS);
+      var activeCount = getActiveFilterCount();
+
+      if (isRootTable) {
+        currentAllColumns = allCols;
+        currentColumns = cols;
+        currentRows = sortedRows;
+
+        setMeta(filtered.length + " / " + arr.length + " 行 · " +
+          cols.length + " / " + allCols.length + " 列 · " + renderMetaPath(pathKey) +
+          (activeCount ? " · " + activeCount + " 个过滤条件" : ""));
+      }
+
+      if (!arr.length) return '<div class="empty">[]</div>';
+
+      var html = "";
+      if (isRootTable && sortedRows.length > MAX_RENDER_ROWS) {
+        html += '<div class="perf-note">数据量较大，仅渲染前 ' + MAX_RENDER_ROWS + ' 行；导出仍包含全部筛选结果。</div>';
+      }
+
+      html += '<table class="' + gridClass(pathKey) + '" data-table-id="' + esc(pathKey) + '"><thead><tr>';
+      renderCols.forEach(function (col) {
+        html += renderHeader(col, arr, pathKey);
+      });
+      html += '</tr></thead><tbody>';
+
+      visibleRows.forEach(function (row) {
+        var rowIndex = arr.indexOf(row);
+        var rowPath = pathKey + '[' + rowIndex + ']';
+        html += '<tr data-row-index="' + rowIndex + '" data-row-path="' + esc(rowPath) + '">';
+        renderCols.forEach(function (col) {
+          var fz = frozenSet && !!frozenSet[col];
+          html += '<td data-copy="' + esc(valueText(row ? row[col] : undefined)) + '"' + (fz ? ' class="frozen-col"' : '') + '>' + renderValue(row ? row[col] : undefined, rowPath + '.' + col) + '</td>';
+        });
+        html += '</tr>';
+      });
+
+      html += '</tbody></table>';
+
+      if (!filtered.length) {
+        html += '<div class="empty">没有匹配结果</div>';
+      }
+
+      return html;
+    }
+
+    function renderArray(arr, path) {
+      if (isRecordArray(arr)) {
+        tableRows = arr;
+        return renderRecordArray(arr, path || "$");
+      }
+
+      // var found = findFirstRecordArray(arr, "$");
+      // if (found) {
+      //   tableRows = found.rows;
+      //   tablePath = found.path;
+      //   return renderRecordArray(tableRows);
+      // }
+
+      setMeta(arr.length + " 项 · " + renderMetaPath(tablePath));
+      if (!arr.length) return '<div class="empty">[]</div>';
+
+      var hasTreeActions = arr.some(function (value) {
+        return hasExpandableValue(value);
+      });
+
+      var tableId = path || "$";
+      var html = '<table class="' + gridClass(tableId) + '" data-table-id="' + esc(tableId) + '"><thead><tr>' +
+        simpleHeader("#", "index-col", tableId, "#") +
+        (showTypeColumn ? simpleHeader("Type", "type-col", tableId, "Type") : "") +
+        renderValueHeader(hasTreeActions, tableId) + '</tr></thead><tbody>';
+
+      arr.forEach(function (value, index) {
+        html += '<tr data-row-path="' + esc((path || '$') + '[' + index + ']') + '">';
+        html += '<td class="index-col" data-copy="' + index + '">' + index + '</td>';
+        if (showTypeColumn) {
+          var typeName = typeOf(value);
+          html += '<td class="type type-col' + (typeName === "number" ? " type-number" : "") + '" data-copy="' + esc(typeName) + '">' + esc(typeName) + '</td>';
+        }
+        html += '<td class="value-col" data-copy="' + esc(valueText(value)) + '">' + renderValue(value, (path || '$') + '[' + index + ']') + '</td>';
+        html += '</tr>';
+      });
+
+      html += '</tbody></table>';
+      return html;
+    }
+
+    function renderNode(v, path) {
+      renderedNodesByPath[path || "$"] = v;
+      if (Array.isArray(v)) return renderArray(v, path || "$");
+      if (isObj(v)) {
+        // var found = findFirstRecordArray(v, "$");
+        // if (found) {
+        //   tableRows = found.rows;
+        //   tablePath = found.path;
+        //   return renderRecordArray(tableRows);
+        // }
+
+        return renderObject(v, path || "$");
+      }
+
+      return '<div class="empty">' + esc(String(v)) + '</div>';
+    }
+
+    function renderPerformanceNotes() {
+      var notes = [];
+      if (raw.length > LARGE_JSON_CHARS) notes.push("响应较大，复杂搜索/展开全部可能较慢");
+      if (globalSearch.value.trim() && raw.length > LARGE_SEARCH_CHARS) notes.push("正在大响应上执行全局搜索，建议缩小关键字");
+      var failures = Object.keys(parseFailureSamples);
+      if (parseJsonString && failures.length) {
+        notes.push("发现 " + failures.length + " 类疑似 JSON 字符串解析失败；可在设置中关闭自动解析");
+      }
+      if (!notes.length) return "";
+      return '<div class="perf-note">' + notes.map(esc).join("；") + '</div>';
+    }
+
+    function bindColumnFreezeEvents() {
+      Array.prototype.forEach.call(content.querySelectorAll(".col-freeze-btn"), function (btn) {
+        btn.onclick = function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          var tid = btn.getAttribute("data-table-id");
+          var col = btn.getAttribute("data-col");
+          setColumnFrozen(tid, col, !isColumnFrozen(tid, col));
+        };
+      });
+    }
+
+    function render(options) {
+      closeTreeMenu();
+      // M3 fix: drop any body-portaled filter menu left over from a previous
+      // render so a re-render never strands a stray floating menu.
+      var staleFilterMenu = document.body.querySelector(".filter-menu");
+      if (staleFilterMenu && staleFilterMenu.parentNode) {
+        staleFilterMenu.parentNode.removeChild(staleFilterMenu);
+      }
+      var preserveDetails = !options || options.preserveDetails !== false;
+      if (preserveDetails) {
+        syncExpandedDetailPaths();
+      } else {
+        expandedDetailPaths = {};
+      }
+
+      if (showTable) {
+        parseFailureSamples = {};
+        renderedNodesByPath = {};
+        content.classList.toggle("freeze-header", freezeHeader);
+        tableRows = null;
+        if (!Object.prototype.hasOwnProperty.call(nodesByPath, selectedPath)) {
+          selectedPath = "$";
+          pathSelect.value = "$";
+        }
+        tablePath = selectedPath;
+        currentAllColumns = [];
+        currentColumns = [];
+        currentRows = [];
+        applySearchExpansion();
+        var renderedHtml = renderNode(nodesByPath[selectedPath], selectedPath);
+        content.innerHTML = renderPerformanceNotes() + renderedHtml;
+        restoreExpandedDetails();
+        expandSearchMatches();
+        bindDetailsToggleEvents();
+        bindNodeActionEvents();
+        bindFilterEvents();
+        bindTreeMenuEvents();
+        bindColumnResizeEvents();
+        bindColumnFreezeEvents();
+        applyFrozenLayout();
+        bindCopyEvents();
+        bindStickyContextEvents();
+        updateStickyOffsets();
+        updateStickyContextBar();
+        updateSettingsPanel();
+        renderFilterChips();
+        bindSettingsPanelEvents();
+
+        if (!tableRows) {
+          setMeta("树形表格 · " + renderMetaPath(tablePath));
+        }
+      } else {
+        meta.textContent = "原始 JSON";
+        filterChips.classList.remove("active");
+        filterChips.innerHTML = "";
+        content.classList.remove("freeze-header");
+        hideStickyContextBar();
+        content.innerHTML = "<pre></pre>";
+        content.querySelector("pre").textContent = JSON.stringify(json, null, 2);
+      }
+
+      toggle.textContent = showTable ? "原始" : "表格";
+      showTypeCheck.checked = showTypeColumn;
+    }
+    
+    pathSelect.onchange = function () {
+      setRootPath(pathSelect.value);
+    };
+
+    globalSearch.oninput = function () {
+      closeTreeMenu();
+      render();
+    };
+
+    resetFilters.onclick = function () {
+      columnFilters = {};
+      activeFilterColumn = null;
+      closeTreeMenu();
+      globalSearch.value = "";
+      render();
+    };
+
+    pathUp.onclick = function () {
+      setRootPath(parentPath(selectedPath));
+    };
+
+    copyPathBtn.onclick = function () {
+      copyText(tablePath);
+    };
+
+    copyJsonBtn.onclick = function () {
+      copyText(JSON.stringify(getExportRows(), null, 2));
+    };
+
+    exportJsonBtn.onclick = function () {
+      downloadFile("json-table-export.json", JSON.stringify(getExportRows(), null, 2), "application/json");
+    };
+
+    exportCsvBtn.onclick = function () {
+      // L7: frozen columns are shown front-and-center in the grid, but the
+      // export keeps the data's original column order. Tell the user so the
+      // reordering isn't mistaken for a data change.
+      var fz = getFrozenColumns(tablePath);
+      var fzCount = fz ? Object.keys(fz).filter(function (k) { return fz[k]; }).length : 0;
+      if (fzCount) {
+        showToast("导出列顺序为数据原始顺序（冻结列在表格中前置显示，不影响导出内容）");
+      }
+      downloadFile("json-table-export.csv", rowsToCsv(getExportRows(), currentColumns.length ? currentColumns : currentAllColumns), "text/csv;charset=utf-8");
+    };
+
+    favPathBtn.onclick = function () {
+      toggleFavoritePath(selectedPath);
+    };
+
+    settingsBtn.onclick = function (event) {
+      event.stopPropagation();
+      activeFilterColumn = null;
+      closeTreeMenu();
+      settingsMenu.hidden = !settingsMenu.hidden;
+      settingsBtn.classList.toggle("active", !settingsMenu.hidden);
+      settingsBtn.setAttribute("aria-expanded", String(!settingsMenu.hidden));
+    };
+
+    showTypeCheck.onchange = function () {
+      showTypeColumn = showTypeCheck.checked;
+      savePersistedState();
+      activeFilterColumn = null;
+      closeTreeMenu();
+      render();
+    };
+
+    freezeHeaderCheck.onchange = function () {
+      freezeHeader = freezeHeaderCheck.checked;
+      savePersistedState();
+      activeFilterColumn = null;
+      closeTreeMenu();
+      render();
+    };
+
+    showStickyHeaderCheck.onchange = function () {
+      showStickyHeader = showStickyHeaderCheck.checked;
+      savePersistedState();
+      activeFilterColumn = null;
+      closeTreeMenu();
+      hideStickyTableHead();
+      updateStickyContextBar();
+    };
+
+    parseJsonStringCheck.onchange = function () {
+      parseJsonString = parseJsonStringCheck.checked;
+      savePersistedState();
+      activeFilterColumn = null;
+      closeTreeMenu();
+      render();
+    };
+
+    headerModeSelect.onchange = function () {
+      stickyHeaderMode = headerModeSelect.value === "multi" ? "multi" : "single";
+      savePersistedState();
+      activeFilterColumn = null;
+      closeTreeMenu();
+      hideStickyTableHead();
+      updateStickyContextBar();
+    };
+
+    toggle.onclick = function () {
+      showTable = !showTable;
+      activeFilterColumn = null;
+      closeTreeMenu();
+      render();
+    };
+
+    document.addEventListener("click", function (event) {
+      var target = event.target;
+      var inTreeLayer = target && target.closest &&
+        (target.closest(".tree-menu") || target.closest(".tree-menu-btn"));
+      var inFilterLayer = target && target.closest &&
+        (target.closest(".th-wrap") || target.closest(".filter-menu") || target.closest(".filter-btn"));
+      var inSettingsLayer = settingsWrap && settingsWrap.contains(target);
+
+      if (!inSettingsLayer) {
+        settingsMenu.hidden = true;
+        settingsBtn.classList.remove("active");
+        settingsBtn.setAttribute("aria-expanded", "false");
+      }
+
+      if (treeMenuOpen && !inTreeLayer) {
+        closeTreeMenu();
+      }
+
+      if (activeFilterColumn && !inFilterLayer) {
+        activeFilterColumn = null;
+        Array.prototype.forEach.call(document.body.querySelectorAll(".filter-menu"), function (menu) {
+          if (menu.parentNode) menu.parentNode.removeChild(menu);
+        });
+      }
+    });
+
+    bindStickyContextEvents();
+    render();
+  });
+</script>

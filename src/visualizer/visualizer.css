@@ -1,0 +1,908 @@
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  }
+
+  .app {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #f7f8fb;
+    color: #172033;
+  }
+
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .title {
+    font-weight: 700;
+  }
+
+  .meta {
+    margin-right: auto;
+    color: #6b7280;
+    font-size: 12px;
+  }
+
+  .meta-path {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .meta-path-btn {
+    border: 0;
+    background: transparent;
+    padding: 0 2px;
+    color: #2563eb;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .meta-path-btn:hover {
+    text-decoration: underline;
+    background: transparent;
+  }
+
+  .meta-path-sep {
+    color: #9ca3af;
+  }
+
+  .search {
+    width: 260px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 7px 10px;
+  }
+
+  button {
+    border: 1px solid #d1d5db;
+    background: #fff;
+    border-radius: 8px;
+    padding: 7px 10px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background: #f3f4f6;
+  }
+
+  .settings-wrap {
+    position: relative;
+  }
+
+  .settings-btn {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    color: #4b5563;
+    background: #fff;
+    transition: background .14s ease, border-color .14s ease, color .14s ease, box-shadow .14s ease;
+  }
+
+  .settings-btn svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+  }
+
+  .settings-btn:hover,
+  .settings-btn.active {
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
+  }
+
+  .settings-menu {
+    position: absolute;
+    top: 38px;
+    right: 0;
+    width: 240px;
+    padding: 8px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+    z-index: 50;
+  }
+
+  .settings-menu[hidden] {
+    display: none;
+  }
+
+  .settings-title {
+    padding: 2px 8px 7px;
+    color: #6b7280;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .setting-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #172033;
+  }
+
+  .setting-row .col-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+  }
+
+  .setting-row:hover {
+    background: #f3f4f6;
+  }
+
+  .setting-row .col-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .freeze-toggle {
+    border: 0;
+    background: transparent;
+    padding: 3px;
+    cursor: pointer;
+    color: #9ca3af;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.55;
+    transition: opacity .15s ease, background .15s ease, color .15s ease;
+  }
+
+  .freeze-toggle svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+  }
+
+  .freeze-toggle:hover {
+    opacity: 1;
+    color: #4b5563;
+    background: #eef0f3;
+  }
+
+  .freeze-toggle.active {
+    color: #2563eb;
+    background: #dbeafe;
+    opacity: 1;
+  }
+
+  .freeze-toggle.active:hover {
+    background: #bfdbfe;
+  }
+
+  .freeze-toggle.active .lock-body {
+    fill: currentColor;
+  }
+
+  .settings-section {
+    border-top: 1px solid #eef0f3;
+    margin-top: 7px;
+    padding-top: 7px;
+  }
+
+  .settings-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .settings-actions button,
+  .path-chip {
+    padding: 6px 7px;
+    font-size: 12px;
+  }
+
+  .column-list,
+  .path-list {
+    max-height: 150px;
+    overflow: auto;
+  }
+
+  .path-chip {
+    width: 100%;
+    margin-top: 4px;
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .search-hit {
+    background: #fef08a;
+    border-radius: 3px;
+    padding: 0 1px;
+  }
+
+  .filter-chips {
+    display: none;
+    gap: 6px;
+    padding: 7px 12px;
+    background: #fff;
+    border-bottom: 1px solid #eef0f3;
+    flex-wrap: wrap;
+  }
+
+  .filter-chips.active {
+    display: flex;
+  }
+
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 260px;
+    padding: 4px 7px;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    color: #1d4ed8;
+    background: #eff6ff;
+    font-size: 12px;
+  }
+
+  .filter-chip-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .filter-chip-remove {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    color: #1d4ed8;
+    background: transparent;
+    line-height: 1;
+  }
+
+  .filter-chip-remove:hover {
+    background: #dbeafe;
+  }
+
+  .value-th-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  .tree-menu-btn {
+    width: 26px;
+    height: 22px;
+    padding: 0;
+    border-radius: 5px;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+    background: #eff6ff;
+    font-size: 13px;
+    line-height: 1;
+  }
+
+  .tree-menu-btn:hover {
+    background: #dbeafe;
+  }
+
+  .tree-menu {
+    position: fixed;
+    width: 150px;
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16);
+    z-index: 9999;
+  }
+
+  .tree-action {
+    border: 0;
+    border-radius: 6px;
+    padding: 7px 8px;
+    text-align: left;
+    font-size: 12px;
+    background: #fff;
+  }
+
+  .tree-action:hover {
+    background: #f3f4f6;
+  }
+
+  .content {
+    flex: 1;
+    overflow: auto;
+    padding: 12px;
+  }
+
+  table.grid {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+  }
+
+  table.grid th,
+  table.grid td {
+    border-bottom: 1px solid #eef0f3;
+    border-right: 1px solid #eef0f3;
+    padding: 8px 10px;
+    vertical-align: top;
+    word-break: break-word;
+  }
+
+  table.grid th {
+    padding-right: 18px;
+  }
+
+  table.grid th:last-child,
+  table.grid td:last-child {
+    border-right: 0;
+  }
+
+  table.grid th {
+    background: #f3f4f6;
+    text-align: left;
+    font-size: 12px;
+    color: #4b5563;
+    min-width: 80px;
+  }
+
+  .content.freeze-header table.root-grid > thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+
+  table.grid .key-col,
+  table.grid .type-col,
+  table.grid .index-col {
+    width: 1%;
+    white-space: nowrap;
+  }
+
+  table.grid .key-col {
+    min-width: 90px;
+  }
+
+  table.grid .type-col {
+    min-width: 72px;
+  }
+
+  table.grid .value-col {
+    width: auto;
+  }
+
+  /* Frozen columns stick to the left edge of the nearest scroll container.
+     Applies to root AND nested grids so nested tables can freeze columns too.
+     Backgrounds are CSS-only so dynamic row/zebra/selected backgrounds (added
+     later) won't be clobbered by inline styles (L6). */
+  table.grid th.frozen-col,
+  table.grid td.frozen-col {
+    position: sticky;
+    left: 0;
+  }
+
+  table.grid thead th.frozen-col {
+    background: #f3f4f6;
+  }
+
+  table.grid tbody td.frozen-col {
+    background: #fff;
+  }
+
+  table.grid.nested-grid th {
+    position: static;
+    top: auto;
+    z-index: auto;
+    background: #f3f4f6;
+  }
+
+  table.grid.nested-grid td:first-child {
+    position: static;
+    left: auto;
+    z-index: auto;
+  }
+
+  table.grid.nested-grid th:first-child {
+    position: static;
+    left: auto;
+    z-index: auto;
+  }
+
+  /* Frozen columns must beat the nested-grid static resets above (equal
+     specificity, later source order wins) so a frozen nested column still
+     sticks instead of being reset to static. */
+  table.grid.nested-grid th.frozen-col,
+  table.grid.nested-grid td.frozen-col {
+    position: sticky;
+    left: 0;
+    z-index: 8;
+  }
+
+  .col-resizer {
+    position: absolute;
+    top: 0;
+    right: -3px;
+    width: 7px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 4;
+  }
+
+  .col-resizer:hover {
+    background: rgba(37, 99, 235, 0.16);
+  }
+
+  body.resizing-col {
+    cursor: col-resize;
+    user-select: none;
+  }
+    .th-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: flex-start;
+  }
+
+  .th-left {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .th-title {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .th-title:hover {
+    background: transparent;
+    color: #2563eb;
+    text-decoration: underline;
+  }
+
+  .sort-mark {
+    color: #2563eb;
+    font-size: 11px;
+  }
+
+  .filter-btn {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .filter-btn svg {
+    width: 13px;
+    height: 13px;
+    display: block;
+  }
+
+  .filter-btn.active {
+    color: #fff;
+    background: #2563eb;
+    border-color: #2563eb;
+  }
+
+  .col-freeze-btn {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    background: transparent;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .col-freeze-btn svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+  }
+
+  .col-freeze-btn:hover {
+    color: #4b5563;
+    background: #eef0f3;
+  }
+
+  .col-freeze-btn.active {
+    color: #fff;
+    background: #2563eb;
+    border-color: #2563eb;
+  }
+
+  .filter-menu {
+    position: fixed;
+    top: -9999px;
+    left: -9999px;
+    right: auto;
+    width: 260px;
+    max-height: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.20);
+    z-index: 10050;
+    color: #172033;
+    visibility: hidden;
+  }
+
+  .filter-menu input[type="text"],
+  .filter-menu select {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 12px;
+    background: #fff;
+  }
+
+  .filter-condition {
+    display: grid;
+    grid-template-columns: 108px 1fr;
+    gap: 6px;
+  }
+
+  .filter-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .filter-actions button {
+    flex: 1;
+    padding: 5px 6px;
+    font-size: 12px;
+  }
+
+  .value-list {
+    max-height: 180px;
+    overflow: auto;
+    border: 1px solid #eef0f3;
+    border-radius: 8px;
+  }
+
+  .check-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-bottom: 1px solid #f1f3f5;
+    font-weight: 400;
+    color: #172033;
+  }
+
+  .check-row:last-child {
+    border-bottom: 0;
+  }
+
+  .check-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .check-count {
+    color: #6b7280;
+    font-size: 11px;
+  }
+
+  .type {
+    color: #6b7280;
+    font-size: 12px;
+  }
+
+  .number-value,
+  .type-number {
+    font-weight: 700;
+  }
+
+  .key-jump {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: #2563eb;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .key-jump:hover {
+    text-decoration: underline;
+    background: transparent;
+  }
+
+  .json-string-badge,
+  .json-parse-warn-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 5px;
+    padding: 1px 5px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .json-string-badge {
+    color: #166534;
+    background: #dcfce7;
+  }
+
+  .json-parse-warn-badge {
+    color: #92400e;
+    background: #fef3c7;
+  }
+
+  .summary-main {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .node-actions {
+    display: inline-flex;
+    gap: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  .node-action {
+    padding: 1px 5px;
+    border-radius: 5px;
+    font-size: 11px;
+    color: #4b5563;
+    background: #fff;
+  }
+
+  .node-action:hover {
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+    background: #eff6ff;
+  }
+
+  .node-action[disabled] {
+    display: none;
+  }
+
+  details {
+    margin: 0;
+  }
+
+  summary {
+    cursor: pointer;
+    color: #2563eb;
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .muted {
+    color: #6b7280;
+  }
+
+  pre {
+    margin: 0;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .empty {
+    margin-top: 12px;
+    padding: 24px;
+    color: #6b7280;
+    background: #fff;
+    border: 1px dashed #d1d5db;
+    border-radius: 10px;
+  }
+
+  .perf-note {
+    margin: 8px 0;
+    padding: 8px 10px;
+    color: #92400e;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    font-size: 12px;
+  }
+  
+  .path-select {
+    max-width: 260px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 7px 10px;
+    background: #fff;
+  }
+
+  .sticky-context {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    padding: 6px 12px;
+    color: #1f2937;
+    background: rgba(255, 255, 255, .96);
+    border-bottom: 1px solid #dbeafe;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, .08);
+    z-index: 8;
+    font-size: 12px;
+  }
+
+  .sticky-context.active {
+    display: flex;
+  }
+
+  .sticky-context-label {
+    color: #6b7280;
+    font-weight: 600;
+  }
+
+  .sticky-context-path {
+    overflow: hidden;
+    color: #2563eb;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sticky-context-summary {
+    color: #6b7280;
+    white-space: nowrap;
+  }
+
+  .sticky-context button {
+    margin-left: auto;
+    padding: 3px 7px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+
+  .sticky-table-head {
+    position: fixed;
+    display: none;
+    overflow: hidden;
+    background: #f3f4f6;
+    border-bottom: 1px solid #dbe3ef;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, .06);
+    z-index: 40;
+  }
+
+  .sticky-table-head.active {
+    display: block;
+  }
+
+  .sticky-table-head.multi {
+    inset: 0 auto auto 0;
+    width: 100vw !important;
+    height: 100vh !important;
+    overflow: visible;
+    background: transparent;
+    border-bottom: 0;
+    box-shadow: none;
+    pointer-events: none;
+  }
+
+  .sticky-table-head-inner {
+    pointer-events: none;
+  }
+
+  .sticky-head-layer {
+    position: fixed;
+    overflow: hidden;
+    background: #f3f4f6;
+    border: 1px solid #dbe3ef;
+    border-radius: 6px;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, .08);
+    pointer-events: none;
+  }
+
+  .sticky-head-layer-inner {
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .sticky-table-head table {
+    height: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    background: #f3f4f6;
+  }
+
+  .sticky-table-head thead,
+  .sticky-table-head tr {
+    height: 100%;
+  }
+
+  .sticky-table-head th {
+    box-sizing: border-box;
+    height: 100%;
+    border-right: 1px solid #eef0f3;
+    padding: 8px 10px;
+    overflow: hidden;
+    color: #4b5563;
+    background: #f3f4f6;
+    font-size: 12px;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .sticky-table-head .th-wrap,
+  .sticky-table-head .th-left {
+    height: 100%;
+    overflow: hidden;
+    align-items: center;
+  }
+
+  .sticky-table-head .filter-menu,
+  .sticky-table-head .col-resizer {
+    display: none;
+  }
+
+  .toast {
+    position: fixed;
+    right: 14px;
+    bottom: 14px;
+    padding: 8px 10px;
+    color: #fff;
+    background: rgba(15, 23, 42, .9);
+    border-radius: 8px;
+    font-size: 12px;
+    z-index: 10000;
+  }
