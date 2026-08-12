@@ -1,7 +1,7 @@
 // 路径导航：表格路径候选、路径下拉、面包屑、最近/收藏路径。
 // 由单文件 index.html 拆分而来；共享状态集中在 state.js（state / dom 两个对象）。
 
-import { dom, state } from "./state.js";
+import { dom, savePersistedState, state } from "./state.js";
 import { render } from "./render.js";
 import { updateSettingsPanel } from "./settings.js";
 import { esc, isObj, summarize } from "./utils.js";

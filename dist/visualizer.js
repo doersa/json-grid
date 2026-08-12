@@ -2608,7 +2608,7 @@
     } catch (e) {
     }
   }
-  function savePersistedState2() {
+  function savePersistedState() {
     safeStorageSet(STORAGE_KEY, JSON.stringify({
       showTypeColumn: state.showTypeColumn,
       freezeHeader: state.freezeHeader,
@@ -2695,21 +2695,21 @@
     };
     dom.showTypeCheck.onchange = function() {
       state.showTypeColumn = dom.showTypeCheck.checked;
-      savePersistedState2();
+      savePersistedState();
       state.activeFilterColumn = null;
       closeTreeMenu();
       render();
     };
     dom.freezeHeaderCheck.onchange = function() {
       state.freezeHeader = dom.freezeHeaderCheck.checked;
-      savePersistedState2();
+      savePersistedState();
       state.activeFilterColumn = null;
       closeTreeMenu();
       render();
     };
     dom.showStickyHeaderCheck.onchange = function() {
       state.showStickyHeader = dom.showStickyHeaderCheck.checked;
-      savePersistedState2();
+      savePersistedState();
       state.activeFilterColumn = null;
       closeTreeMenu();
       hideStickyTableHead();
@@ -2717,14 +2717,14 @@
     };
     dom.parseJsonStringCheck.onchange = function() {
       state.parseJsonString = dom.parseJsonStringCheck.checked;
-      savePersistedState2();
+      savePersistedState();
       state.activeFilterColumn = null;
       closeTreeMenu();
       render();
     };
     dom.headerModeSelect.onchange = function() {
       state.stickyHeaderMode = dom.headerModeSelect.value === "multi" ? "multi" : "single";
-      savePersistedState2();
+      savePersistedState();
       state.activeFilterColumn = null;
       closeTreeMenu();
       hideStickyTableHead();

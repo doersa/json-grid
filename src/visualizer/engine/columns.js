@@ -1,7 +1,7 @@
 // 列模型与布局：列收集、显隐/冻结状态、列宽拖拽、冻结定位。
 // 由单文件 index.html 拆分而来；共享状态集中在 state.js（state / dom 两个对象）。
 
-import { dom, state } from "./state.js";
+import { dom, savePersistedState, state } from "./state.js";
 import { render } from "./render.js";
 import { isObj, showToast } from "./utils.js";
 export function collectColumns(rows) {

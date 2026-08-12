@@ -1,7 +1,7 @@
 // 渲染主流程：值/对象/数组/记录表的 HTML 生成与总 render()。
 // 由单文件 index.html 拆分而来；共享状态集中在 state.js（state / dom 两个对象）。
 
-import { LARGE_JSON_CHARS, LARGE_SEARCH_CHARS, MAX_RENDER_ROWS, dom, state } from "./state.js";
+import { LARGE_JSON_CHARS, LARGE_SEARCH_CHARS, MAX_RENDER_ROWS, dom, savePersistedState, state } from "./state.js";
 import { applyFrozenLayout, bindColumnFreezeEvents, bindColumnResizeEvents, collectColumns, ensureFrozenColumns, getFrozenColumns, getVisibleColumns } from "./columns.js";
 import { applySearchExpansion, bindDetailsToggleEvents, bindTreeMenuEvents, closeTreeMenu, getNodeAtPath, getPathDepth, gridClass, hasExpandableValue, restoreExpandedDetails, syncExpandedDetailPaths } from "./details-tree.js";
 import { bindFilterEvents, expandSearchMatches, filterMenuKey, getActiveFilterCount, getColumnFilter, getFilteredRows, getSortedRows, hasColumnFilter, renderFilterChips, renderFilterMenu } from "./filter-sort.js";
