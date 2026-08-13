@@ -97,8 +97,35 @@ export function cloneTableHead(table, tableRect, contentRect) {
   return html;
 }
 
-export function getRootHeaderMetrics(contentRect) {
-  var rootHead = dom.content.querySelector("table.root-grid > thead");
+// Pin cloned frozen-column headers to the floating head's left edge so they
+// stay aligned with the original table's sticky frozen columns during
+// horizontal scroll. The clone table has no `grid` class, so the CSS
+// `table.grid th.frozen-col` sticky rule doesn't apply to it; absolute
+// positioning relative to the fixed .sticky-table-head / .sticky-head-layer
+// restores the pin without relying on sticky.
+function pinFrozenClones(container) {
+  var ths = container.querySelectorAll("thead th.frozen-col");
+  if (!ths.length) return;
+  var cols = container.querySelectorAll("colgroup col");
+  Array.prototype.forEach.call(ths, function (th) {
+    var left = th.style.left || "0px";
+    // Read width from the colgroup <col> (set explicitly by cloneTableHead).
+    // th.getBoundingClientRect().width can read 0 if the floating head's
+    // size isn't laid out yet at pin time.
+    var col = cols[th.cellIndex];
+    var width = col ? parseFloat(col.style.width) : 0;
+    if (!width) width = th.getBoundingClientRect().width;
+    th.style.position = "absolute";
+    th.style.top = "0px";
+    th.style.left = left;
+    th.style.width = Math.round(width) + "px";
+    th.style.height = "100%";
+    th.style.zIndex = 8;
+    th.style.boxSizing = "border-box";
+  });
+}
+
+export function getRootHeaderMetrics(contentRect) {  var rootHead = dom.content.querySelector("table.root-grid > thead");
   if (!rootHead) return { bottom: contentRect.top, height: 36 };
 
   var rect = rootHead.getBoundingClientRect();
@@ -133,11 +160,11 @@ export function getStickyHeadMetrics(item, contentRect, minTop) {
   return { table: table, tableRect: tableRect, height: headHeight, left: left, width: width };
 }
 
-export function renderStickyHeadLayer(metric, top) {
-  var left = Math.round(metric.left);
-  var width = Math.round(metric.width);
+export function renderStickyHeadLayer(metric, top, contentRect) {
+  var left = Math.round(contentRect.left);
+  var width = Math.round(contentRect.width);
   var height = Math.round(metric.height);
-  var marginLeft = Math.round(metric.tableRect.left - metric.left);
+  var marginLeft = Math.round(metric.tableRect.left - contentRect.left);
   var tableWidth = Math.round(metric.tableRect.width);
 
   return '<div class="sticky-head-layer" style="left:' + left + 'px;top:' + Math.round(top) +
@@ -145,7 +172,6 @@ export function renderStickyHeadLayer(metric, top) {
     '<div class="sticky-head-layer-inner" style="margin-left:' + marginLeft + 'px;width:' + tableWidth +
     'px;height:' + height + 'px">' + cloneTableHead(metric.table, metric.tableRect) + '</div></div>';
 }
-
 export function updateSingleStickyTableHead(item) {
   var contentRect = dom.content.getBoundingClientRect();
   var rootHeader = getRootHeaderMetrics(contentRect);
@@ -157,22 +183,27 @@ export function updateSingleStickyTableHead(item) {
 
   var key = (item.getAttribute("data-path") || "") + "::" + Math.round(metric.tableRect.left) +
     "::" + Math.round(metric.tableRect.width) + "::" + dom.content.scrollLeft + "::single";
-  if (state.stickyTableHeadKey !== key) {
+  var keyChanged = state.stickyTableHeadKey !== key;
+  if (keyChanged) {
     dom.stickyTableHeadInner.innerHTML = cloneTableHead(metric.table, metric.tableRect);
     state.stickyTableHeadKey = key;
   }
 
   dom.stickyTableHead.classList.remove("multi");
-  dom.stickyTableHead.style.left = Math.round(metric.left) + "px";
+  dom.stickyTableHead.style.left = Math.round(contentRect.left) + "px";
   dom.stickyTableHead.style.top = Math.round(rootHeader.bottom) + "px";
-  dom.stickyTableHead.style.width = Math.round(metric.width) + "px";
+  dom.stickyTableHead.style.width = Math.round(contentRect.width) + "px";
   dom.stickyTableHead.style.height = Math.round(metric.height) + "px";
   dom.stickyTableHeadInner.style.height = Math.round(metric.height) + "px";
-  dom.stickyTableHeadInner.style.marginLeft = Math.round(metric.tableRect.left - metric.left) + "px";
+  dom.stickyTableHeadInner.style.marginLeft = Math.round(metric.tableRect.left - contentRect.left) + "px";
   dom.stickyTableHeadInner.style.width = Math.round(metric.tableRect.width) + "px";
+  // Pin after the head's size is applied so th.getBoundingClientRect().width
+  // reflects the laid-out column width (not 0 from an unsized container).
+  if (keyChanged) {
+    pinFrozenClones(dom.stickyTableHeadInner);
+  }
   dom.stickyTableHead.classList.add("active");
 }
-
 export function updateMultiStickyTableHead() {
   var contentRect = dom.content.getBoundingClientRect();
   var rootHeader = getRootHeaderMetrics(contentRect);
@@ -188,7 +219,7 @@ export function updateMultiStickyTableHead() {
 
     seen[signature] = true;
     if (top + metric.height > contentRect.bottom) return;
-    layers.push(renderStickyHeadLayer(metric, top));
+    layers.push(renderStickyHeadLayer(metric, top, contentRect));
     top += metric.height + 6;
   });
 
@@ -200,6 +231,9 @@ export function updateMultiStickyTableHead() {
   var key = layers.join("") + "::multi";
   if (state.stickyTableHeadKey !== key) {
     dom.stickyTableHeadInner.innerHTML = layers.join("");
+    Array.prototype.forEach.call(dom.stickyTableHeadInner.querySelectorAll(".sticky-head-layer-inner"), function (inner) {
+      pinFrozenClones(inner);
+    });
     state.stickyTableHeadKey = key;
   }
 
@@ -213,7 +247,6 @@ export function updateMultiStickyTableHead() {
   dom.stickyTableHeadInner.style.height = "100vh";
   dom.stickyTableHead.classList.add("active");
 }
-
 export function updateStickyTableHead(item) {
   if (state.stickyHeaderMode === "multi") {
     updateMultiStickyTableHead();

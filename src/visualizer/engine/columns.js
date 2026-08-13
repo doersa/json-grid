@@ -99,15 +99,15 @@ export function applyFrozenLayout() {
   // Process every grid (root AND nested) so frozen columns in nested
   // tables are laid out too.
   var tables = dom.content.querySelectorAll("table.grid");
+  // Batch 1 - read every frozen column width across ALL tables first.
+  // Reads interleaved with style writes force one reflow per table;
+  // reading them all up front collapses the whole pass to a single reflow (H1/M2).
+  var plan = [];
   for (var t = 0; t < tables.length; t++) {
     var table = tables[t];
     if (!table.tHead || !table.tHead.rows.length) continue;
     var ths = table.tHead.rows[0].cells;
     var rows = table.tBodies[0] ? table.tBodies[0].rows : [];
-
-    // Batch 1 — read every frozen column width FIRST. Reads interleaved
-    // with writes force one synchronous reflow per frozen column (H1);
-    // reading them all up front collapses that to a single reflow.
     var widths = new Array(ths.length);
     var firstW = -1;
     for (var i = 0; i < ths.length; i++) {
@@ -122,27 +122,31 @@ export function applyFrozenLayout() {
     }
 
     // L2: if layout isn't ready (e.g. a backgrounded tab where widths
-    // measure 0), don't paint stale/off-by offsets — wait for the
+    // measure 0), don't paint stale/off-by offsets - wait for the
     // visibilitychange / ResizeObserver re-run instead.
     if (firstW <= 0) continue;
 
-    // Batch 2 — write all offsets/z-index. Background is delegated to CSS
-    // (.frozen-col rules) so future row/zebra/selected backgrounds aren't
-    // clobbered by inline styles (L6).
+    plan.push({ ths: ths, rows: rows, widths: widths });
+  }
+
+  // Batch 2 - write all offsets/z-index. Background is delegated to CSS
+  // (.frozen-col rules) so future row/zebra/selected backgrounds aren't
+  // clobbered by inline styles (L6).
+  for (var p = 0; p < plan.length; p++) {
+    var item = plan[p];
     var left = 0;
-    for (var j = 0; j < ths.length; j++) {
-      var t2 = ths[j];
-      if (!t2.classList.contains("frozen-col")) continue;
-      t2.style.left = left + "px";
-      t2.style.zIndex = 8;
-      for (var r = 0; r < rows.length; r++) {
-        var td = rows[r].cells[j];
+    for (var j = 0; j < item.ths.length; j++) {
+      if (item.widths[j] < 0) continue;
+      item.ths[j].style.left = left + "px";
+      item.ths[j].style.zIndex = 8;
+      for (var r = 0; r < item.rows.length; r++) {
+        var td = item.rows[r].cells[j];
         if (td) {
           td.style.left = left + "px";
           td.style.zIndex = 2;
         }
       }
-      left += Math.round(widths[j]);
+      left += Math.round(item.widths[j]);
     }
   }
 }

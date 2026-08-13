@@ -992,6 +992,7 @@
   }
   function applyFrozenLayout() {
     var tables = dom.content.querySelectorAll("table.grid");
+    var plan = [];
     for (var t = 0; t < tables.length; t++) {
       var table = tables[t];
       if (!table.tHead || !table.tHead.rows.length) continue;
@@ -1010,20 +1011,23 @@
         widths[i] = w;
       }
       if (firstW <= 0) continue;
+      plan.push({ ths, rows, widths });
+    }
+    for (var p = 0; p < plan.length; p++) {
+      var item = plan[p];
       var left = 0;
-      for (var j = 0; j < ths.length; j++) {
-        var t2 = ths[j];
-        if (!t2.classList.contains("frozen-col")) continue;
-        t2.style.left = left + "px";
-        t2.style.zIndex = 8;
-        for (var r = 0; r < rows.length; r++) {
-          var td = rows[r].cells[j];
+      for (var j = 0; j < item.ths.length; j++) {
+        if (item.widths[j] < 0) continue;
+        item.ths[j].style.left = left + "px";
+        item.ths[j].style.zIndex = 8;
+        for (var r = 0; r < item.rows.length; r++) {
+          var td = item.rows[r].cells[j];
           if (td) {
             td.style.left = left + "px";
             td.style.zIndex = 2;
           }
         }
-        left += Math.round(widths[j]);
+        left += Math.round(item.widths[j]);
       }
     }
   }
@@ -1835,6 +1839,24 @@
     html += "</colgroup><thead>" + head.innerHTML + "</thead></table>";
     return html;
   }
+  function pinFrozenClones(container) {
+    var ths = container.querySelectorAll("thead th.frozen-col");
+    if (!ths.length) return;
+    var cols = container.querySelectorAll("colgroup col");
+    Array.prototype.forEach.call(ths, function(th) {
+      var left = th.style.left || "0px";
+      var col = cols[th.cellIndex];
+      var width = col ? parseFloat(col.style.width) : 0;
+      if (!width) width = th.getBoundingClientRect().width;
+      th.style.position = "absolute";
+      th.style.top = "0px";
+      th.style.left = left;
+      th.style.width = Math.round(width) + "px";
+      th.style.height = "100%";
+      th.style.zIndex = 8;
+      th.style.boxSizing = "border-box";
+    });
+  }
   function getRootHeaderMetrics(contentRect) {
     var rootHead = dom.content.querySelector("table.root-grid > thead");
     if (!rootHead) return { bottom: contentRect.top, height: 36 };
@@ -1864,11 +1886,11 @@
     if (width <= 0) return null;
     return { table, tableRect, height: headHeight, left, width };
   }
-  function renderStickyHeadLayer(metric, top) {
-    var left = Math.round(metric.left);
-    var width = Math.round(metric.width);
+  function renderStickyHeadLayer(metric, top, contentRect) {
+    var left = Math.round(contentRect.left);
+    var width = Math.round(contentRect.width);
     var height = Math.round(metric.height);
-    var marginLeft = Math.round(metric.tableRect.left - metric.left);
+    var marginLeft = Math.round(metric.tableRect.left - contentRect.left);
     var tableWidth = Math.round(metric.tableRect.width);
     return '<div class="sticky-head-layer" style="left:' + left + "px;top:" + Math.round(top) + "px;width:" + width + "px;height:" + height + 'px"><div class="sticky-head-layer-inner" style="margin-left:' + marginLeft + "px;width:" + tableWidth + "px;height:" + height + 'px">' + cloneTableHead(metric.table, metric.tableRect) + "</div></div>";
   }
@@ -1881,18 +1903,22 @@
       return;
     }
     var key = (item.getAttribute("data-path") || "") + "::" + Math.round(metric.tableRect.left) + "::" + Math.round(metric.tableRect.width) + "::" + dom.content.scrollLeft + "::single";
-    if (state.stickyTableHeadKey !== key) {
+    var keyChanged = state.stickyTableHeadKey !== key;
+    if (keyChanged) {
       dom.stickyTableHeadInner.innerHTML = cloneTableHead(metric.table, metric.tableRect);
       state.stickyTableHeadKey = key;
     }
     dom.stickyTableHead.classList.remove("multi");
-    dom.stickyTableHead.style.left = Math.round(metric.left) + "px";
+    dom.stickyTableHead.style.left = Math.round(contentRect.left) + "px";
     dom.stickyTableHead.style.top = Math.round(rootHeader.bottom) + "px";
-    dom.stickyTableHead.style.width = Math.round(metric.width) + "px";
+    dom.stickyTableHead.style.width = Math.round(contentRect.width) + "px";
     dom.stickyTableHead.style.height = Math.round(metric.height) + "px";
     dom.stickyTableHeadInner.style.height = Math.round(metric.height) + "px";
-    dom.stickyTableHeadInner.style.marginLeft = Math.round(metric.tableRect.left - metric.left) + "px";
+    dom.stickyTableHeadInner.style.marginLeft = Math.round(metric.tableRect.left - contentRect.left) + "px";
     dom.stickyTableHeadInner.style.width = Math.round(metric.tableRect.width) + "px";
+    if (keyChanged) {
+      pinFrozenClones(dom.stickyTableHeadInner);
+    }
     dom.stickyTableHead.classList.add("active");
   }
   function updateMultiStickyTableHead() {
@@ -1908,7 +1934,7 @@
       if (!metric || !signature || seen[signature]) return;
       seen[signature] = true;
       if (top + metric.height > contentRect.bottom) return;
-      layers.push(renderStickyHeadLayer(metric, top));
+      layers.push(renderStickyHeadLayer(metric, top, contentRect));
       top += metric.height + 6;
     });
     if (!layers.length) {
@@ -1918,6 +1944,9 @@
     var key = layers.join("") + "::multi";
     if (state.stickyTableHeadKey !== key) {
       dom.stickyTableHeadInner.innerHTML = layers.join("");
+      Array.prototype.forEach.call(dom.stickyTableHeadInner.querySelectorAll(".sticky-head-layer-inner"), function(inner) {
+        pinFrozenClones(inner);
+      });
       state.stickyTableHeadKey = key;
     }
     dom.stickyTableHead.classList.add("multi");
@@ -2688,6 +2717,9 @@
     dom.settingsBtn.onclick = function(event) {
       event.stopPropagation();
       state.activeFilterColumn = null;
+      Array.prototype.forEach.call(document.body.querySelectorAll(".filter-menu"), function(menu) {
+        if (menu.parentNode) menu.parentNode.removeChild(menu);
+      });
       closeTreeMenu();
       dom.settingsMenu.hidden = !dom.settingsMenu.hidden;
       dom.settingsBtn.classList.toggle("active", !dom.settingsMenu.hidden);

@@ -108,6 +108,11 @@ pm.getData(function (err, data) {
   dom.settingsBtn.onclick = function (event) {
     event.stopPropagation();
     state.activeFilterColumn = null;
+    // Drop any body-portaled filter menu so it doesn't strand on screen
+    // (stopPropagation above skips the document-level click cleaner).
+    Array.prototype.forEach.call(document.body.querySelectorAll(".filter-menu"), function (menu) {
+      if (menu.parentNode) menu.parentNode.removeChild(menu);
+    });
     closeTreeMenu();
     dom.settingsMenu.hidden = !dom.settingsMenu.hidden;
     dom.settingsBtn.classList.toggle("active", !dom.settingsMenu.hidden);
