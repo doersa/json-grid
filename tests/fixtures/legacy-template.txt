@@ -1478,18 +1478,18 @@
     }
 
     function isIndexContextPath(path) {
-      return /[d+]$/.test(path || "");
+      return /\[\d+\]$/.test(path || "");
     }
 
     function getContextName(path) {
       if (!path || path === "$") return "$";
 
-      var base = String(path).replace(/([d+])+$/g, "");
+      var base = String(path).replace(/\[\d+\]$/g, "");
       var keyMatch = base.match(/.([^.[]+)$/);
       if (keyMatch) return keyMatch[1];
 
-      var indexMatch = String(path).match(/([d+])$/);
-      return indexMatch ? indexMatch[1] : path;
+      var indexMatch = String(path).match(/\[\d+\]$/);
+      return indexMatch ? indexMatch[0] : path;
     }
 
     function hideStickyTableHead() {
@@ -1593,10 +1593,10 @@
       }).join("|");
     }
 
-    function getStickyHeadMetrics(item, contentRect, minTop) {
-      var table = getContextTable(item);
-      var tableRect = table ? table.getBoundingClientRect() : null;
-      var head = table && table.tHead;
+    function computeStickyMetric(table, contentRect, minTop) {
+      if (!table) return null;
+      var tableRect = table.getBoundingClientRect();
+      var head = table.tHead;
       var headRect = head ? head.getBoundingClientRect() : null;
       var headHeight = headRect ? Math.max(28, Math.round(headRect.height || 36)) : 36;
       if (!tableRect || !headRect || headRect.top > minTop || tableRect.bottom <= minTop + headHeight) return null;
@@ -1608,11 +1608,15 @@
       return { table: table, tableRect: tableRect, height: headHeight, left: left, width: width };
     }
 
-    function renderStickyHeadLayer(metric, top) {
-      var left = Math.round(metric.left);
-      var width = Math.round(metric.width);
+    function getStickyHeadMetrics(item, contentRect, minTop) {
+      return computeStickyMetric(getContextTable(item), contentRect, minTop);
+    }
+
+    function renderStickyHeadLayer(metric, top, contentRect) {
+      var left = Math.round(contentRect.left);
+      var width = Math.round(contentRect.width);
       var height = Math.round(metric.height);
-      var marginLeft = Math.round(metric.tableRect.left - metric.left);
+      var marginLeft = Math.round(metric.tableRect.left - contentRect.left);
       var tableWidth = Math.round(metric.tableRect.width);
 
       return '<div class="sticky-head-layer" style="left:' + left + 'px;top:' + Math.round(top) +
@@ -1624,27 +1628,54 @@
     function updateSingleStickyTableHead(item) {
       var contentRect = content.getBoundingClientRect();
       var rootHeader = getRootHeaderMetrics(contentRect);
-      var metric = getStickyHeadMetrics(item, contentRect, rootHeader.bottom);
-      if (!metric) {
+      var minTop = rootHeader.bottom;
+
+      var items = getActiveContextDetails();
+      var candidates = [];
+      items.forEach(function (it) {
+        var m = getStickyHeadMetrics(it, contentRect, minTop);
+        if (m) candidates.push({ item: it, metric: m, depth: Number(it.getAttribute("data-depth") || 0), isRoot: false });
+      });
+
+      var rootTable = content.querySelector("table.root-grid");
+      if (rootTable && rootTable.tHead) {
+        var rootHeadRect = rootTable.tHead.getBoundingClientRect();
+        if (rootHeadRect.top < contentRect.top) {
+          var rootMetric = computeStickyMetric(rootTable, contentRect, contentRect.top);
+          if (rootMetric) candidates.push({ item: null, metric: rootMetric, depth: -1, isRoot: true });
+        }
+      }
+
+      if (!candidates.length) {
         hideStickyTableHead();
         return;
       }
 
-      var key = (item.getAttribute("data-path") || "") + "::" + Math.round(metric.tableRect.left) +
-        "::" + Math.round(metric.tableRect.width) + "::" + content.scrollLeft + "::single";
-      if (stickyTableHeadKey !== key) {
+      candidates.sort(function (a, b) { return a.depth - b.depth; });
+      var chosen = candidates[candidates.length - 1];
+      item = chosen.item;
+      var metric = chosen.metric;
+
+      var key = (chosen.isRoot ? "$::root" : (item.getAttribute("data-path") || "")) + "::" +
+        Math.round(metric.tableRect.left) + "::" + Math.round(metric.tableRect.width) +
+        "::" + content.scrollLeft + "::single";
+      var keyChanged = stickyTableHeadKey !== key;
+      if (keyChanged) {
         stickyTableHeadInner.innerHTML = cloneTableHead(metric.table, metric.tableRect);
         stickyTableHeadKey = key;
       }
 
       stickyTableHead.classList.remove("multi");
       stickyTableHead.style.left = Math.round(metric.left) + "px";
-      stickyTableHead.style.top = Math.round(rootHeader.bottom) + "px";
+      stickyTableHead.style.top = Math.round(minTop) + "px";
       stickyTableHead.style.width = Math.round(metric.width) + "px";
       stickyTableHead.style.height = Math.round(metric.height) + "px";
       stickyTableHeadInner.style.height = Math.round(metric.height) + "px";
-      stickyTableHeadInner.style.marginLeft = Math.round(metric.tableRect.left - metric.left) + "px";
+      stickyTableHeadInner.style.marginLeft = "0px";
       stickyTableHeadInner.style.width = Math.round(metric.tableRect.width) + "px";
+      if (keyChanged) {
+        pinFrozenClones(stickyTableHeadInner);
+      }
       stickyTableHead.classList.add("active");
     }
 
@@ -1654,7 +1685,22 @@
       var items = getActiveContextDetails();
       var seen = {};
       var layers = [];
-      var top = rootHeader.bottom;
+      var candidates = [];
+
+      var rootTable = content.querySelector("table.root-grid");
+      if (rootTable && rootTable.tHead) {
+        var rootHeadRect = rootTable.tHead.getBoundingClientRect();
+        if (rootHeadRect.top < contentRect.top) {
+          var rootMetric = computeStickyMetric(rootTable, contentRect, contentRect.top);
+          if (rootMetric) {
+            var rootSig = tableHeaderSignature(rootMetric.table);
+            if (rootSig && !seen[rootSig]) {
+              seen[rootSig] = true;
+              candidates.push({ depth: -1, metric: rootMetric });
+            }
+          }
+        }
+      }
 
       items.forEach(function (item) {
         var metric = getStickyHeadMetrics(item, contentRect, rootHeader.bottom);
@@ -1662,9 +1708,15 @@
         if (!metric || !signature || seen[signature]) return;
 
         seen[signature] = true;
-        if (top + metric.height > contentRect.bottom) return;
-        layers.push(renderStickyHeadLayer(metric, top));
-        top += metric.height + 6;
+        candidates.push({ depth: Number(item.getAttribute("data-depth") || 0), metric: metric });
+      });
+
+      candidates.sort(function (a, b) { return a.depth - b.depth; });
+      var top = rootHeader.bottom;
+      candidates.forEach(function (c) {
+        if (top + c.metric.height > contentRect.bottom) return;
+        layers.push(renderStickyHeadLayer(c.metric, top, contentRect));
+        top += c.metric.height + 6;
       });
 
       if (!layers.length) {
@@ -1675,6 +1727,9 @@
       var key = layers.join("") + "::multi";
       if (stickyTableHeadKey !== key) {
         stickyTableHeadInner.innerHTML = layers.join("");
+        Array.prototype.forEach.call(stickyTableHeadInner.querySelectorAll(".sticky-head-layer-inner"), function (inner) {
+          pinFrozenClones(inner);
+        });
         stickyTableHeadKey = key;
       }
 
@@ -1718,7 +1773,11 @@
 
       var item = findActiveContextDetail();
       if (!item) {
-        hideStickyContextBar();
+        stickyContextBar.classList.remove("active");
+        stickyContextPath.textContent = "";
+        stickyContextSummary.textContent = "";
+        stickyContextPathValue = "";
+        updateStickyTableHead(null);
         return;
       }
 

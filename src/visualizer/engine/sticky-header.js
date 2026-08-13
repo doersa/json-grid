@@ -3,18 +3,18 @@
 
 import { dom, state } from "./state.js";
 export function isIndexContextPath(path) {
-  return /[d+]$/.test(path || "");
+  return /\[\d+\]$/.test(path || "");
 }
 
 export function getContextName(path) {
   if (!path || path === "$") return "$";
 
-  var base = String(path).replace(/([d+])+$/g, "");
+  var base = String(path).replace(/\[\d+\]$/g, "");
   var keyMatch = base.match(/.([^.[]+)$/);
   if (keyMatch) return keyMatch[1];
 
-  var indexMatch = String(path).match(/([d+])$/);
-  return indexMatch ? indexMatch[1] : path;
+  var indexMatch = String(path).match(/\[\d+\]$/);
+  return indexMatch ? indexMatch[0] : path;
 }
 
 export function hideStickyTableHead() {
@@ -145,10 +145,12 @@ export function tableHeaderSignature(table) {
   }).join("|");
 }
 
-export function getStickyHeadMetrics(item, contentRect, minTop) {
-  var table = getContextTable(item);
-  var tableRect = table ? table.getBoundingClientRect() : null;
-  var head = table && table.tHead;
+// Core metric: given a table element, decide whether its header has scrolled
+// above `minTop` (so a floating clone is needed) and return its visible box.
+export function computeStickyMetric(table, contentRect, minTop) {
+  if (!table) return null;
+  var tableRect = table.getBoundingClientRect();
+  var head = table.tHead;
   var headRect = head ? head.getBoundingClientRect() : null;
   var headHeight = headRect ? Math.max(28, Math.round(headRect.height || 36)) : 36;
   if (!tableRect || !headRect || headRect.top > minTop || tableRect.bottom <= minTop + headHeight) return null;
@@ -158,6 +160,10 @@ export function getStickyHeadMetrics(item, contentRect, minTop) {
   if (width <= 0) return null;
 
   return { table: table, tableRect: tableRect, height: headHeight, left: left, width: width };
+}
+
+export function getStickyHeadMetrics(item, contentRect, minTop) {
+  return computeStickyMetric(getContextTable(item), contentRect, minTop);
 }
 
 export function renderStickyHeadLayer(metric, top, contentRect) {
@@ -175,25 +181,42 @@ export function renderStickyHeadLayer(metric, top, contentRect) {
 export function updateSingleStickyTableHead(item) {
   var contentRect = dom.content.getBoundingClientRect();
   var rootHeader = getRootHeaderMetrics(contentRect);
-  // findActiveContextDetail 返回 summary 刚越过 minTop 线的最深 details，但它的
-  // 表头可能还在 minTop 下方（原表头仍可见）。此时 getStickyHeadMetrics 返回 null
-  // 会让浮动表头在层级切换瞬间消失——滚动时表现为"时有时无"。回退到更浅的、表头
-  // 已滚到顶部的 candidate，让浮动表头在新表头到达前继续显示上一层表头，平滑过渡。
+  var minTop = rootHeader.bottom;
+
+  // 收集候选：所有“summary 已越过 minTop 线、且自身表头已滚到顶部”的开放 details，
+  // 再加上根表（主记录数组表）。根表不在 details 里，主表滚动时也必须浮动，否则
+  // 顶部会出现一条空白带（见 issue）。
   var items = getActiveContextDetails();
-  var chosen = null;
-  for (var i = items.length - 1; i >= 0; i--) {
-    var m = getStickyHeadMetrics(items[i], contentRect, rootHeader.bottom);
-    if (m) { chosen = { item: items[i], metric: m }; break; }
+  var candidates = [];
+  items.forEach(function (it) {
+    var m = getStickyHeadMetrics(it, contentRect, minTop);
+    if (m) candidates.push({ item: it, metric: m, depth: Number(it.getAttribute("data-depth") || 0), isRoot: false });
+  });
+
+  var rootTable = dom.content.querySelector("table.root-grid");
+  // 根表头只有在“已滚出视口顶部”时才需要浮动；仍在原位时原生表头可见，不必重复浮动。
+  if (rootTable && rootTable.tHead) {
+    var rootHeadRect = rootTable.tHead.getBoundingClientRect();
+    if (rootHeadRect.top < contentRect.top) {
+      var rootMetric = computeStickyMetric(rootTable, contentRect, contentRect.top);
+      if (rootMetric) candidates.push({ item: null, metric: rootMetric, depth: -1, isRoot: true });
+    }
   }
-  if (!chosen) {
+
+  if (!candidates.length) {
     hideStickyTableHead();
     return;
   }
+
+  // 取最深（最内层）的候选，让内层表头优先浮动；根表作为兜底。
+  candidates.sort(function (a, b) { return a.depth - b.depth; });
+  var chosen = candidates[candidates.length - 1];
   item = chosen.item;
   var metric = chosen.metric;
 
-  var key = (item.getAttribute("data-path") || "") + "::" + Math.round(metric.tableRect.left) +
-    "::" + Math.round(metric.tableRect.width) + "::" + dom.content.scrollLeft + "::single";
+  var key = (chosen.isRoot ? "$::root" : (item.getAttribute("data-path") || "")) + "::" +
+    Math.round(metric.tableRect.left) + "::" + Math.round(metric.tableRect.width) +
+    "::" + dom.content.scrollLeft + "::single";
   var keyChanged = state.stickyTableHeadKey !== key;
   if (keyChanged) {
     dom.stickyTableHeadInner.innerHTML = cloneTableHead(metric.table, metric.tableRect);
@@ -201,12 +224,13 @@ export function updateSingleStickyTableHead(item) {
   }
 
   dom.stickyTableHead.classList.remove("multi");
-  dom.stickyTableHead.style.left = Math.round(contentRect.left) + "px";
-  dom.stickyTableHead.style.top = Math.round(rootHeader.bottom) + "px";
-  dom.stickyTableHead.style.width = Math.round(contentRect.width) + "px";
+  // 紧贴可见表格区域定位（legacy 行为），避免整宽 + marginLeft 偏移导致的空白带/错位。
+  dom.stickyTableHead.style.left = Math.round(metric.left) + "px";
+  dom.stickyTableHead.style.top = Math.round(minTop) + "px";
+  dom.stickyTableHead.style.width = Math.round(metric.width) + "px";
   dom.stickyTableHead.style.height = Math.round(metric.height) + "px";
   dom.stickyTableHeadInner.style.height = Math.round(metric.height) + "px";
-  dom.stickyTableHeadInner.style.marginLeft = Math.round(metric.tableRect.left - contentRect.left) + "px";
+  dom.stickyTableHeadInner.style.marginLeft = "0px";
   dom.stickyTableHeadInner.style.width = Math.round(metric.tableRect.width) + "px";
   // Pin after the head's size is applied so th.getBoundingClientRect().width
   // reflects the laid-out column width (not 0 from an unsized container).
@@ -221,7 +245,24 @@ export function updateMultiStickyTableHead() {
   var items = getActiveContextDetails();
   var seen = {};
   var layers = [];
-  var top = rootHeader.bottom;
+  var candidates = [];
+
+  // 根表（主记录表）滚动出视口顶部时也要作为最顶层浮动层，否则主表头消失后
+  // 顶部会留一条空白带（与单层模式同样的根表浮动需求）。
+  var rootTable = dom.content.querySelector("table.root-grid");
+  if (rootTable && rootTable.tHead) {
+    var rootHeadRect = rootTable.tHead.getBoundingClientRect();
+    if (rootHeadRect.top < contentRect.top) {
+      var rootMetric = computeStickyMetric(rootTable, contentRect, contentRect.top);
+      if (rootMetric) {
+        var rootSig = tableHeaderSignature(rootMetric.table);
+        if (rootSig && !seen[rootSig]) {
+          seen[rootSig] = true;
+          candidates.push({ depth: -1, metric: rootMetric });
+        }
+      }
+    }
+  }
 
   items.forEach(function (item) {
     var metric = getStickyHeadMetrics(item, contentRect, rootHeader.bottom);
@@ -229,9 +270,16 @@ export function updateMultiStickyTableHead() {
     if (!metric || !signature || seen[signature]) return;
 
     seen[signature] = true;
-    if (top + metric.height > contentRect.bottom) return;
-    layers.push(renderStickyHeadLayer(metric, top, contentRect));
-    top += metric.height + 6;
+    candidates.push({ depth: Number(item.getAttribute("data-depth") || 0), metric: metric });
+  });
+
+  // 按深度从外到内（根 -1 最上）排序后，自上而下堆叠各浮动层。
+  candidates.sort(function (a, b) { return a.depth - b.depth; });
+  var top = rootHeader.bottom;
+  candidates.forEach(function (c) {
+    if (top + c.metric.height > contentRect.bottom) return;
+    layers.push(renderStickyHeadLayer(c.metric, top, contentRect));
+    top += c.metric.height + 6;
   });
 
   if (!layers.length) {
@@ -287,7 +335,12 @@ export function updateStickyContextBar() {
 
   var item = findActiveContextDetail();
   if (!item) {
-    hideStickyContextBar();
+    // 没有活动明细时，仅隐藏“层级上下文条”；根表浮动头仍由 updateStickyTableHead 接管。
+    dom.stickyContextBar.classList.remove("active");
+    dom.stickyContextPath.textContent = "";
+    dom.stickyContextSummary.textContent = "";
+    dom.stickyContextPathValue = "";
+    updateStickyTableHead(null);
     return;
   }
 
