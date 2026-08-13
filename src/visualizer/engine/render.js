@@ -71,11 +71,10 @@ export function renderHeader(col, rows, tableId) {
   if (hasTreeActions) {
     html += '<button class="tree-menu-btn" title="展开/折叠本列层级" aria-expanded="false">⤢</button>';
   }
-  // Nested tables have no settings panel, so expose column freezing
-  // directly in the header (root tables keep the settings-panel lock).
-  if (tableId !== state.tablePath) {
-    html += '<button class="col-freeze-btn' + (fz ? " active" : "") + '" data-table-id="' + esc(tableId) + '" data-col="' + esc(col) + '" title="冻结/解冻此列">' + freezeIconSvg() + '</button>';
-  }
+  // 列冻结按钮：所有表格（根表 + 嵌套表）都直接放在表头，与过滤/层级
+  // 按钮一致。根表格额外有设置面板的锁作为入口，两者都走 setColumnFrozen，
+  // 互不冲突。非激活态由 CSS 控制 hover 淡入，避免多列时表头拥挤。
+  html += '<button class="col-freeze-btn' + (fz ? " active" : "") + '" data-table-id="' + esc(tableId) + '" data-col="' + esc(col) + '" title="冻结/解冻此列">' + freezeIconSvg() + '</button>';
   html += '</span>';
   html += renderFilterMenu(col, rows, tableId);
   html += '</div>';

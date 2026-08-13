@@ -561,6 +561,38 @@
     border-color: #2563eb;
   }
 
+  /* \u8868\u5934\u52A8\u4F5C\u6309\u94AE\u5BC6\u5EA6\u63A7\u5236\uFF1A\u9ED8\u8BA4\u53EA\u9732\u51FA\u201C\u6FC0\u6D3B\u6001\u201D\u4F5C\u4E3A\u72B6\u6001\u6307\u793A
+     \uFF08\u8FC7\u6EE4\u6FC0\u6D3B\u7684 filter-btn\u3001\u5DF2\u51BB\u7ED3\u7684 col-freeze-btn\uFF09\uFF0C\u5176\u4F59
+     \u975E\u6FC0\u6D3B\u6309\u94AE opacity:0 \u9690\u85CF\uFF0Chover/focus \u6574\u4E2A <th> \u65F6\u624D\u6DE1\u5165\u3002
+     \u7528 opacity \u800C\u975E display\uFF0C\u4FDD\u7559\u5E03\u5C40\u5360\u4F4D\uFF0C\u907F\u514D hover \u65F6\u5217\u5BBD/\u6807\u9898\u8DF3\u52A8\u3002 */
+  .th-left .filter-btn:not(.active),
+  .th-left .col-freeze-btn:not(.active),
+  .th-left .tree-menu-btn {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+  }
+
+  th:hover .th-left .filter-btn:not(.active),
+  th:focus-within .th-left .filter-btn:not(.active),
+  th:hover .th-left .col-freeze-btn:not(.active),
+  th:focus-within .th-left .col-freeze-btn:not(.active),
+  th:hover .th-left .tree-menu-btn,
+  th:focus-within .th-left .tree-menu-btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* \u89E6\u6478\u8BBE\u5907\u65E0 hover\uFF0C\u4FDD\u6301\u6309\u94AE\u5E38\u9A7B\u53EF\u70B9\uFF08\u542B\u952E\u76D8 focus \u4E4B\u5916\u7684\u89E6\u63A7\u573A\u666F\uFF09\u3002 */
+  @media (hover: none) {
+    .th-left .filter-btn:not(.active),
+    .th-left .col-freeze-btn:not(.active),
+    .th-left .tree-menu-btn {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+
   .filter-menu {
     position: fixed;
     top: -9999px;
@@ -2066,9 +2098,7 @@
     if (hasTreeActions) {
       html += '<button class="tree-menu-btn" title="\\u5C55\\u5F00/\\u6298\\u53E0\\u672C\\u5217\\u5C42\\u7EA7" aria-expanded="false">\\u2922</button>';
     }
-    if (tableId !== state.tablePath) {
-      html += '<button class="col-freeze-btn' + (fz ? " active" : "") + '" data-table-id="' + esc(tableId) + '" data-col="' + esc(col) + '" title="\\u51BB\\u7ED3/\\u89E3\\u51BB\\u6B64\\u5217">' + freezeIconSvg() + "</button>";
-    }
+    html += '<button class="col-freeze-btn' + (fz ? " active" : "") + '" data-table-id="' + esc(tableId) + '" data-col="' + esc(col) + '" title="\\u51BB\\u7ED3/\\u89E3\\u51BB\\u6B64\\u5217">' + freezeIconSvg() + "</button>";
     html += "</span>";
     html += renderFilterMenu(col, rows, tableId);
     html += "</div>";

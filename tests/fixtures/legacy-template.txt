@@ -560,6 +560,38 @@
     border-color: #2563eb;
   }
 
+  /* 表头动作按钮密度控制：默认只露出“激活态”作为状态指示
+     （过滤激活的 filter-btn、已冻结的 col-freeze-btn），其余
+     非激活按钮 opacity:0 隐藏，hover/focus 整个 <th> 时才淡入。
+     用 opacity 而非 display，保留布局占位，避免 hover 时列宽/标题跳动。 */
+  .th-left .filter-btn:not(.active),
+  .th-left .col-freeze-btn:not(.active),
+  .th-left .tree-menu-btn {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+  }
+
+  th:hover .th-left .filter-btn:not(.active),
+  th:focus-within .th-left .filter-btn:not(.active),
+  th:hover .th-left .col-freeze-btn:not(.active),
+  th:focus-within .th-left .col-freeze-btn:not(.active),
+  th:hover .th-left .tree-menu-btn,
+  th:focus-within .th-left .tree-menu-btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* 触摸设备无 hover，保持按钮常驻可点（含键盘 focus 之外的触控场景）。 */
+  @media (hover: none) {
+    .th-left .filter-btn:not(.active),
+    .th-left .col-freeze-btn:not(.active),
+    .th-left .tree-menu-btn {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+
   .filter-menu {
     position: fixed;
     top: -9999px;
@@ -2385,11 +2417,10 @@
       if (hasTreeActions) {
         html += '<button class="tree-menu-btn" title="展开/折叠本列层级" aria-expanded="false">⤢</button>';
       }
-      // Nested tables have no settings panel, so expose column freezing
-      // directly in the header (root tables keep the settings-panel lock).
-      if (tableId !== tablePath) {
-        html += '<button class="col-freeze-btn' + (fz ? " active" : "") + '" data-table-id="' + esc(tableId) + '" data-col="' + esc(col) + '" title="冻结/解冻此列">' + freezeIconSvg() + '</button>';
-      }
+      // 列冻结按钮：所有表格（根表 + 嵌套表）都直接放在表头。根表格额外有
+      // 设置面板的锁作为入口，两者都走 setColumnFrozen，互不冲突。非激活态
+      // 由 CSS 控制 hover 淡入，避免多列时表头拥挤。
+      html += '<button class="col-freeze-btn' + (fz ? " active" : "") + '" data-table-id="' + esc(tableId) + '" data-col="' + esc(col) + '" title="冻结/解冻此列">' + freezeIconSvg() + '</button>';
       html += '</span>';
       html += renderFilterMenu(col, rows, tableId);
       html += '</div>';
