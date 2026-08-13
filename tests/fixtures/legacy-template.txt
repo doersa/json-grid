@@ -949,7 +949,7 @@
   }
 
   .sticky-table-head table {
-    height: 100%;
+    height: auto;
     border-collapse: collapse;
     table-layout: fixed;
     background: #f3f4f6;
@@ -957,15 +957,16 @@
 
   .sticky-table-head thead,
   .sticky-table-head tr {
-    height: 100%;
+    height: auto;
   }
 
   .sticky-table-head th {
     box-sizing: border-box;
-    height: 100%;
+    /* 不强制 height: 100%，让行高按内容自然撑开；
+       当 .th-title 多行换行（长列名+窄列）时整行变高，避免覆盖下方数据。 */
+    height: auto;
     border-right: 1px solid #eef0f3;
     padding: 8px 10px;
-    overflow: hidden;
     color: #4b5563;
     background: #f3f4f6;
     font-size: 12px;
@@ -975,11 +976,26 @@
 
   .sticky-table-head .th-wrap,
   .sticky-table-head .th-left {
-    height: 100%;
-    overflow: hidden;
+    /* 移除 height: 100%，交给内容驱动；wrap 时行高自动撑开。 */
+    height: auto;
+    overflow: visible;
     align-items: center;
   }
 
+  /* 浮动表头列名换行：列宽窄时整列名换到 2-3 行显示，不再被截断为省略号，
+     也不再依赖 z-index/背景覆盖后排按钮。按钮（排序/过滤/冻结）保持原样
+     在标题之后自然排列，冻结列的蓝锁等激活态仍可见。 */
+  .sticky-table-head .th-title {
+    white-space: normal;
+    overflow: visible;
+    word-break: break-word;
+    text-align: left;
+  }
+
+  /* 浮动头只隐藏无意义的「拖拽手柄」与「过滤下拉面板」；列名、冻结/过滤
+     激活态、排序标记等状态指示全部保留，确保与原表头视觉一致。
+     （非激活的过滤/冻结/树形按钮在原表头本就是 opacity:0，hover 才淡入；
+       浮动头 pointer-events:none 不会 hover，故天然不可见，无需额外隐藏。） */
   .sticky-table-head .filter-menu,
   .sticky-table-head .col-resizer {
     display: none;

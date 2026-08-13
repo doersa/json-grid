@@ -228,8 +228,13 @@ export function updateSingleStickyTableHead(item) {
   dom.stickyTableHead.style.left = Math.round(metric.left) + "px";
   dom.stickyTableHead.style.top = Math.round(minTop) + "px";
   dom.stickyTableHead.style.width = Math.round(metric.width) + "px";
-  dom.stickyTableHead.style.height = Math.round(metric.height) + "px";
-  dom.stickyTableHeadInner.style.height = Math.round(metric.height) + "px";
+  // 用 minHeight 而非 height：当 .th-title 因列窄换行（v3 修法）时行高会
+  // 超过原 thead 的单行高度，外层容器需要随之撑高；内容刚好一行时按
+  // minHeight = 原行高，与 legacy 视觉等价。
+  dom.stickyTableHead.style.minHeight = Math.round(metric.height) + "px";
+  dom.stickyTableHead.style.height = "auto";
+  dom.stickyTableHeadInner.style.minHeight = Math.round(metric.height) + "px";
+  dom.stickyTableHeadInner.style.height = "auto";
   dom.stickyTableHeadInner.style.marginLeft = "0px";
   dom.stickyTableHeadInner.style.width = Math.round(metric.tableRect.width) + "px";
   // Pin after the head's size is applied so th.getBoundingClientRect().width
