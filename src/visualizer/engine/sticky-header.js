@@ -175,11 +175,22 @@ export function renderStickyHeadLayer(metric, top, contentRect) {
 export function updateSingleStickyTableHead(item) {
   var contentRect = dom.content.getBoundingClientRect();
   var rootHeader = getRootHeaderMetrics(contentRect);
-  var metric = getStickyHeadMetrics(item, contentRect, rootHeader.bottom);
-  if (!metric) {
+  // findActiveContextDetail 返回 summary 刚越过 minTop 线的最深 details，但它的
+  // 表头可能还在 minTop 下方（原表头仍可见）。此时 getStickyHeadMetrics 返回 null
+  // 会让浮动表头在层级切换瞬间消失——滚动时表现为"时有时无"。回退到更浅的、表头
+  // 已滚到顶部的 candidate，让浮动表头在新表头到达前继续显示上一层表头，平滑过渡。
+  var items = getActiveContextDetails();
+  var chosen = null;
+  for (var i = items.length - 1; i >= 0; i--) {
+    var m = getStickyHeadMetrics(items[i], contentRect, rootHeader.bottom);
+    if (m) { chosen = { item: items[i], metric: m }; break; }
+  }
+  if (!chosen) {
     hideStickyTableHead();
     return;
   }
+  item = chosen.item;
+  var metric = chosen.metric;
 
   var key = (item.getAttribute("data-path") || "") + "::" + Math.round(metric.tableRect.left) +
     "::" + Math.round(metric.tableRect.width) + "::" + dom.content.scrollLeft + "::single";

@@ -1929,11 +1929,21 @@
   function updateSingleStickyTableHead(item) {
     var contentRect = dom.content.getBoundingClientRect();
     var rootHeader = getRootHeaderMetrics(contentRect);
-    var metric = getStickyHeadMetrics(item, contentRect, rootHeader.bottom);
-    if (!metric) {
+    var items = getActiveContextDetails();
+    var chosen = null;
+    for (var i = items.length - 1; i >= 0; i--) {
+      var m = getStickyHeadMetrics(items[i], contentRect, rootHeader.bottom);
+      if (m) {
+        chosen = { item: items[i], metric: m };
+        break;
+      }
+    }
+    if (!chosen) {
       hideStickyTableHead();
       return;
     }
+    item = chosen.item;
+    var metric = chosen.metric;
     var key = (item.getAttribute("data-path") || "") + "::" + Math.round(metric.tableRect.left) + "::" + Math.round(metric.tableRect.width) + "::" + dom.content.scrollLeft + "::single";
     var keyChanged = state.stickyTableHeadKey !== key;
     if (keyChanged) {
