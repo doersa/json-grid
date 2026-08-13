@@ -2,7 +2,7 @@
 // 由单文件 index.html 拆分而来；共享状态集中在 state.js（state / dom 两个对象）。
 
 import { dom, state } from "./state.js";
-import { getFrozenColumns, getHiddenColumns, isColumnFrozen, setColumnFrozen, setColumnVisible } from "./columns.js";
+import { getFrozenColumns, getHiddenColumns, isColumnFrozen, resetColumnOrder, setColumnFrozen, setColumnVisible } from "./columns.js";
 import { setRootPath } from "./paths.js";
 import { copyText, esc } from "./utils.js";
 export function updateSettingsPanel() {
@@ -18,12 +18,18 @@ export function updateSettingsPanel() {
 
 export function renderColumnSettingsPanel() {
   if (!state.currentAllColumns.length) {
+    if (dom.resetColOrderBtn) dom.resetColOrderBtn.hidden = true;
     dom.columnSettings.innerHTML = '<div class="muted" style="padding:6px 8px">当前不是对象数组表格</div>';
     return;
   }
 
   var hidden = getHiddenColumns(state.tablePath);
   var frozenSet = getFrozenColumns(state.tablePath);
+  // 重置按钮仅在当前表存在自定义列顺序时露出。
+  if (dom.resetColOrderBtn) {
+    var savedOrder = state.columnOrderByPath[state.tablePath];
+    dom.resetColOrderBtn.hidden = !(savedOrder && savedOrder.length);
+  }
   dom.columnSettings.innerHTML = state.currentAllColumns.map(function (col) {
     var checked = hidden[col] ? "" : " checked";
     var fz = frozenSet[col];
@@ -60,6 +66,15 @@ export function bindSettingsPanelEvents() {
       setColumnFrozen(state.tablePath, btn.getAttribute("data-col"), !isColumnFrozen(state.tablePath, btn.getAttribute("data-col")));
     };
   });
+
+  var resetBtn = dom.settingsMenu.querySelector(".reset-col-order");
+  if (resetBtn) {
+    resetBtn.onclick = function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      resetColumnOrder(state.tablePath);
+    };
+  }
 
   Array.prototype.forEach.call(dom.settingsMenu.querySelectorAll(".path-shortcut"), function (btn) {
     btn.onclick = function (event) {

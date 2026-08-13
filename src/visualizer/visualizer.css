@@ -124,10 +124,33 @@
   }
 
   .settings-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     padding: 2px 8px 7px;
     color: #6b7280;
     font-size: 11px;
     font-weight: 700;
+  }
+
+  .reset-col-order {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 400;
+    color: #2563eb;
+    cursor: pointer;
+  }
+
+  .reset-col-order:hover {
+    text-decoration: underline;
+  }
+
+  .reset-col-order[hidden] {
+    display: none;
   }
 
   .setting-row {
@@ -464,6 +487,39 @@
   body.resizing-col {
     cursor: col-resize;
     user-select: none;
+  }
+
+  /* 列拖拽换序：表头可抓取（.col-reorderable），拖动时全局 grabbing 光标、
+     源列半透明、目标边界高亮。仅记录数组表的数据列带 .col-reorderable；
+     作用域到 table.grid 以避开浮动表头克隆（克隆无 .grid 类）。 */
+  table.grid th.col-reorderable {
+    cursor: grab;
+  }
+
+  table.grid th.col-reorderable .filter-btn,
+  table.grid th.col-reorderable .tree-menu-btn {
+    cursor: pointer;
+  }
+
+  body.dragging-col {
+    cursor: grabbing;
+    user-select: none;
+  }
+
+  body.dragging-col table.grid th.col-reorderable {
+    cursor: grabbing;
+  }
+
+  body.dragging-col table.grid th.col-dragging {
+    opacity: 0.45;
+  }
+
+  table.grid th.col-reorderable.col-drop-before {
+    box-shadow: inset 2px 0 0 #2563eb;
+  }
+
+  table.grid th.col-reorderable.col-drop-after {
+    box-shadow: inset -2px 0 0 #2563eb;
   }
     .th-wrap {
     position: relative;

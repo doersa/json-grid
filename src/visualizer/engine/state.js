@@ -31,6 +31,7 @@ export function initDomRefs() {
   dom.parseJsonStringCheck = document.getElementById("parseJsonStringCheck");
   dom.headerModeSelect = document.getElementById("headerModeSelect");
   dom.columnSettings = document.getElementById("columnSettings");
+  dom.resetColOrderBtn = document.getElementById("resetColOrderBtn");
   dom.copyPathBtn = document.getElementById("copyPathBtn");
   dom.copyJsonBtn = document.getElementById("copyJsonBtn");
   dom.exportJsonBtn = document.getElementById("exportJsonBtn");
@@ -58,6 +59,7 @@ export const state = {
   columnWidths: {},
   hiddenColumnsByPath: {},
   frozenColumnsByPath: {},
+  columnOrderByPath: {},
   pendingFreezeFirstCol: false,
   renderedNodesByPath: {},
   parseFailureSamples: {},
@@ -99,6 +101,7 @@ export function loadPersistedState() {
     state.hiddenColumnsByPath = isPlainObject(persisted.hiddenColumnsByPath) ? persisted.hiddenColumnsByPath : {};
     var hadFrozenColumns = Object.prototype.hasOwnProperty.call(persisted, "frozenColumnsByPath");
     state.frozenColumnsByPath = isPlainObject(persisted.frozenColumnsByPath) ? persisted.frozenColumnsByPath : {};
+    state.columnOrderByPath = isPlainObject(persisted.columnOrderByPath) ? persisted.columnOrderByPath : {};
     state.favoritePaths = isPlainObject(persisted.favoritePaths) ? persisted.favoritePaths : {};
     state.recentPaths = Array.isArray(persisted.recentPaths) && persisted.recentPaths.length ? persisted.recentPaths.slice(0, 6) : state.recentPaths;
     if (state.freezeHeader && !hadFrozenColumns) state.pendingFreezeFirstCol = true;
@@ -116,6 +119,7 @@ export function savePersistedState() {
     columnWidths: state.columnWidths,
     hiddenColumnsByPath: state.hiddenColumnsByPath,
     frozenColumnsByPath: state.frozenColumnsByPath,
+    columnOrderByPath: state.columnOrderByPath,
     favoritePaths: state.favoritePaths,
     recentPaths: state.recentPaths
   }));

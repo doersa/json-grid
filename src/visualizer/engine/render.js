@@ -2,7 +2,7 @@
 // 由单文件 index.html 拆分而来；共享状态集中在 state.js（state / dom 两个对象）。
 
 import { LARGE_JSON_CHARS, LARGE_SEARCH_CHARS, MAX_RENDER_ROWS, dom, savePersistedState, state } from "./state.js";
-import { applyFrozenLayout, bindColumnFreezeEvents, bindColumnResizeEvents, collectColumns, ensureFrozenColumns, getFrozenColumns, getVisibleColumns } from "./columns.js";
+import { applyFrozenLayout, bindColumnFreezeEvents, bindColumnResizeEvents, bindColumnReorderEvents, collectColumns, ensureFrozenColumns, getFrozenColumns, getOrderedColumns, getVisibleColumns } from "./columns.js";
 import { applySearchExpansion, bindDetailsToggleEvents, bindTreeMenuEvents, closeTreeMenu, getNodeAtPath, getPathDepth, gridClass, hasExpandableValue, restoreExpandedDetails, syncExpandedDetailPaths } from "./details-tree.js";
 import { bindFilterEvents, expandSearchMatches, filterMenuKey, getActiveFilterCount, getColumnFilter, getFilteredRows, getSortedRows, hasColumnFilter, renderFilterChips, renderFilterMenu } from "./filter-sort.js";
 import { findFirstRecordArray, isRecordArray, renderMetaPath } from "./paths.js";
@@ -61,7 +61,7 @@ export function renderHeader(col, rows, tableId) {
   var html = "";
   var fz = !!getFrozenColumns(tableId)[col];
 
-  html += '<th data-col-key="' + esc(col) + '"' + colWidthStyle(tableId, col) + (fz ? ' class="frozen-col"' : '') + '>';
+  html += '<th data-col-key="' + esc(col) + '"' + colWidthStyle(tableId, col) + ' class="col-reorderable' + (fz ? ' frozen-col' : '') + '">';
   html += '<div class="th-wrap">';
   html += '<span class="th-left">';
   html += '<button class="th-title" data-col="' + esc(col) + '" title="点击排序">' + esc(col) + '</button>';
@@ -195,6 +195,21 @@ export function renderRecordArray(arr, path) {
     });
     if (pruned) savePersistedState();
   }
+  // L8 (order): prune saved column-order entries for columns that no longer
+  // exist in the data, mirroring the frozen-flag pruning above so stale names
+  // don't accumulate in persisted state. Applies to root and nested tables.
+  var savedOrder = state.columnOrderByPath[pathKey];
+  if (savedOrder && savedOrder.length) {
+    var prunedOrder = savedOrder.filter(function (c) { return allCols.indexOf(c) >= 0; });
+    if (prunedOrder.length !== savedOrder.length) {
+      state.columnOrderByPath[pathKey] = prunedOrder;
+      savePersistedState();
+    }
+  }
+  // L7: 导出列顺序固定为数据原始可见顺序，不受冻结前置 / 拖拽换序影响
+  // （仅显示变化，不改变导出内容）。先快照可见顺序，再对渲染顺序重排。
+  var exportColumns = cols;
+  cols = getOrderedColumns(cols, pathKey);
   if (isRootTable && state.pendingFreezeFirstCol && allCols.length) {
     frozenSet = ensureFrozenColumns(pathKey);
     frozenSet[allCols[0]] = true;
@@ -215,7 +230,7 @@ export function renderRecordArray(arr, path) {
 
   if (isRootTable) {
     state.currentAllColumns = allCols;
-    state.currentColumns = cols;
+    state.currentColumns = exportColumns;
     state.currentRows = sortedRows;
 
     setMeta(filtered.length + " / " + arr.length + " 行 · " +
@@ -365,6 +380,7 @@ export function render(options) {
     bindTreeMenuEvents();
     bindColumnResizeEvents();
     bindColumnFreezeEvents();
+    bindColumnReorderEvents();
     applyFrozenLayout();
     bindCopyEvents();
     bindStickyContextEvents();

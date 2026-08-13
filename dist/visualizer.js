@@ -126,10 +126,33 @@
   }
 
   .settings-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     padding: 2px 8px 7px;
     color: #6b7280;
     font-size: 11px;
     font-weight: 700;
+  }
+
+  .reset-col-order {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 400;
+    color: #2563eb;
+    cursor: pointer;
+  }
+
+  .reset-col-order:hover {
+    text-decoration: underline;
+  }
+
+  .reset-col-order[hidden] {
+    display: none;
   }
 
   .setting-row {
@@ -466,6 +489,39 @@
   body.resizing-col {
     cursor: col-resize;
     user-select: none;
+  }
+
+  /* \u5217\u62D6\u62FD\u6362\u5E8F\uFF1A\u8868\u5934\u53EF\u6293\u53D6\uFF08.col-reorderable\uFF09\uFF0C\u62D6\u52A8\u65F6\u5168\u5C40 grabbing \u5149\u6807\u3001
+     \u6E90\u5217\u534A\u900F\u660E\u3001\u76EE\u6807\u8FB9\u754C\u9AD8\u4EAE\u3002\u4EC5\u8BB0\u5F55\u6570\u7EC4\u8868\u7684\u6570\u636E\u5217\u5E26 .col-reorderable\uFF1B
+     \u4F5C\u7528\u57DF\u5230 table.grid \u4EE5\u907F\u5F00\u6D6E\u52A8\u8868\u5934\u514B\u9686\uFF08\u514B\u9686\u65E0 .grid \u7C7B\uFF09\u3002 */
+  table.grid th.col-reorderable {
+    cursor: grab;
+  }
+
+  table.grid th.col-reorderable .filter-btn,
+  table.grid th.col-reorderable .tree-menu-btn {
+    cursor: pointer;
+  }
+
+  body.dragging-col {
+    cursor: grabbing;
+    user-select: none;
+  }
+
+  body.dragging-col table.grid th.col-reorderable {
+    cursor: grabbing;
+  }
+
+  body.dragging-col table.grid th.col-dragging {
+    opacity: 0.45;
+  }
+
+  table.grid th.col-reorderable.col-drop-before {
+    box-shadow: inset 2px 0 0 #2563eb;
+  }
+
+  table.grid th.col-reorderable.col-drop-after {
+    box-shadow: inset -2px 0 0 #2563eb;
   }
     .th-wrap {
     position: relative;
@@ -943,7 +999,7 @@
 `;
 
   // src/visualizer/skeleton.html
-  var skeleton_default = '\n\n<div class="app">\n  <div class="bar">\n    <div class="title">JSON Table</div>\n    <div class="meta" id="meta"></div>\n    <button id="pathUp" title="\u4E0A\u4E00\u7EA7\u8DEF\u5F84">\u4E0A\u7EA7</button>\n    <select id="pathSelect" class="path-select"></select>\n    <input id="globalSearch" class="search" placeholder="\u5168\u5C40\u641C\u7D22">\n    <button id="resetFilters">\u91CD\u7F6E\u8FC7\u6EE4</button>\n    <button id="toggle">\u539F\u59CB</button>\n    <div class="settings-wrap" id="settingsWrap">\n      <button id="settingsBtn" class="settings-btn" title="\u8BBE\u7F6E" aria-label="\u8BBE\u7F6E" aria-expanded="false">\n        <svg viewBox="0 0 16 16" aria-hidden="true">\n          <path d="M3 4.5h10M3 11.5h10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>\n          <circle cx="6" cy="4.5" r="1.7" fill="#fff" stroke="currentColor" stroke-width="1.2"/>\n          <circle cx="10" cy="11.5" r="1.7" fill="#fff" stroke="currentColor" stroke-width="1.2"/>\n        </svg>\n      </button>\n      <div id="settingsMenu" class="settings-menu" hidden>\n        <div class="settings-title">\u8BBE\u7F6E</div>\n        <label class="setting-row">\n          <input id="showTypeCheck" type="checkbox">\n          <span>\u663E\u793A Type \u5217</span>\n        </label>\n        <label class="setting-row" title="\u6EDA\u52A8\u65F6\u4FDD\u6301\u8868\u5934\u884C\u56FA\u5B9A\u5728\u9876\u90E8\uFF08\u4EC5\u56FA\u5B9A\u884C\uFF1B\u51BB\u7ED3\u5217\u8BF7\u7528\u5404\u5217\u8BBE\u7F6E\u91CC\u7684\u9501\u56FE\u6807\uFF09">\n          <input id="freezeHeaderCheck" type="checkbox">\n          <span>\u56FA\u5B9A\u8868\u5934\u884C</span>\n        </label>\n        <label class="setting-row">\n          <input id="showStickyHeaderCheck" type="checkbox">\n          <span>\u663E\u793A\u5C42\u7EA7\u6D6E\u52A8\u8868\u5934</span>\n        </label>\n        <label class="setting-row">\n          <input id="parseJsonStringCheck" type="checkbox">\n          <span>\u89E3\u6790 JSON \u5B57\u7B26\u4E32</span>\n        </label>\n        <label class="setting-row">\n          <span>\u6D6E\u52A8\u8868\u5934\u6A21\u5F0F</span>\n          <select id="headerModeSelect" style="margin-left:auto;max-width:96px">\n            <option value="single">\u5355\u5C42</option>\n            <option value="multi">\u591A\u5C42</option>\n          </select>\n        </label>\n        <div class="settings-section">\n          <div class="settings-title">\u5B57\u6BB5\u663E\u793A</div>\n          <div id="columnSettings" class="column-list"></div>\n        </div>\n        <div class="settings-section">\n          <div class="settings-title">\u590D\u5236 / \u5BFC\u51FA</div>\n          <div class="settings-actions">\n            <button id="copyPathBtn">\u590D\u5236\u8DEF\u5F84</button>\n            <button id="copyJsonBtn">\u590D\u5236 JSON</button>\n            <button id="exportJsonBtn">\u5BFC\u51FA JSON</button>\n            <button id="exportCsvBtn">\u5BFC\u51FA CSV</button>\n          </div>\n        </div>\n        <div class="settings-section">\n          <div class="settings-title">\u8DEF\u5F84</div>\n          <button id="favPathBtn" class="path-chip">\u6536\u85CF\u5F53\u524D\u8DEF\u5F84</button>\n          <div id="pathShortcuts" class="path-list"></div>\n        </div>\n      </div>\n    </div>\n  </div>\n  <div class="filter-chips" id="filterChips"></div>\n  <div class="sticky-context" id="stickyContextBar" title="\u5F53\u524D\u6EDA\u52A8\u5C42\u7EA7">\n    <span class="sticky-context-label">\u5F53\u524D\u5C42\u7EA7</span>\n    <span class="sticky-context-path" id="stickyContextPath"></span>\n    <span class="sticky-context-summary" id="stickyContextSummary"></span>\n    <button id="stickyContextJump" type="button">\u5B9A\u4F4D</button>\n  </div>\n  <div class="sticky-table-head" id="stickyTableHead">\n    <div class="sticky-table-head-inner" id="stickyTableHeadInner"></div>\n  </div>\n  <div class="content" id="content"></div>\n</div>\n\n';
+  var skeleton_default = '\n\n<div class="app">\n  <div class="bar">\n    <div class="title">JSON Table</div>\n    <div class="meta" id="meta"></div>\n    <button id="pathUp" title="\u4E0A\u4E00\u7EA7\u8DEF\u5F84">\u4E0A\u7EA7</button>\n    <select id="pathSelect" class="path-select"></select>\n    <input id="globalSearch" class="search" placeholder="\u5168\u5C40\u641C\u7D22">\n    <button id="resetFilters">\u91CD\u7F6E\u8FC7\u6EE4</button>\n    <button id="toggle">\u539F\u59CB</button>\n    <div class="settings-wrap" id="settingsWrap">\n      <button id="settingsBtn" class="settings-btn" title="\u8BBE\u7F6E" aria-label="\u8BBE\u7F6E" aria-expanded="false">\n        <svg viewBox="0 0 16 16" aria-hidden="true">\n          <path d="M3 4.5h10M3 11.5h10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>\n          <circle cx="6" cy="4.5" r="1.7" fill="#fff" stroke="currentColor" stroke-width="1.2"/>\n          <circle cx="10" cy="11.5" r="1.7" fill="#fff" stroke="currentColor" stroke-width="1.2"/>\n        </svg>\n      </button>\n      <div id="settingsMenu" class="settings-menu" hidden>\n        <div class="settings-title">\u8BBE\u7F6E</div>\n        <label class="setting-row">\n          <input id="showTypeCheck" type="checkbox">\n          <span>\u663E\u793A Type \u5217</span>\n        </label>\n        <label class="setting-row" title="\u6EDA\u52A8\u65F6\u4FDD\u6301\u8868\u5934\u884C\u56FA\u5B9A\u5728\u9876\u90E8\uFF08\u4EC5\u56FA\u5B9A\u884C\uFF1B\u51BB\u7ED3\u5217\u8BF7\u7528\u5404\u5217\u8BBE\u7F6E\u91CC\u7684\u9501\u56FE\u6807\uFF09">\n          <input id="freezeHeaderCheck" type="checkbox">\n          <span>\u56FA\u5B9A\u8868\u5934\u884C</span>\n        </label>\n        <label class="setting-row">\n          <input id="showStickyHeaderCheck" type="checkbox">\n          <span>\u663E\u793A\u5C42\u7EA7\u6D6E\u52A8\u8868\u5934</span>\n        </label>\n        <label class="setting-row">\n          <input id="parseJsonStringCheck" type="checkbox">\n          <span>\u89E3\u6790 JSON \u5B57\u7B26\u4E32</span>\n        </label>\n        <label class="setting-row">\n          <span>\u6D6E\u52A8\u8868\u5934\u6A21\u5F0F</span>\n          <select id="headerModeSelect" style="margin-left:auto;max-width:96px">\n            <option value="single">\u5355\u5C42</option>\n            <option value="multi">\u591A\u5C42</option>\n          </select>\n        </label>\n        <div class="settings-section">\n          <div class="settings-title">\u5B57\u6BB5\u663E\u793A<button type="button" class="reset-col-order" id="resetColOrderBtn" title="\u6062\u590D\u5217\u7684\u539F\u59CB\u987A\u5E8F" hidden>\u91CD\u7F6E\u987A\u5E8F</button></div>\n          <div id="columnSettings" class="column-list"></div>\n        </div>\n        <div class="settings-section">\n          <div class="settings-title">\u590D\u5236 / \u5BFC\u51FA</div>\n          <div class="settings-actions">\n            <button id="copyPathBtn">\u590D\u5236\u8DEF\u5F84</button>\n            <button id="copyJsonBtn">\u590D\u5236 JSON</button>\n            <button id="exportJsonBtn">\u5BFC\u51FA JSON</button>\n            <button id="exportCsvBtn">\u5BFC\u51FA CSV</button>\n          </div>\n        </div>\n        <div class="settings-section">\n          <div class="settings-title">\u8DEF\u5F84</div>\n          <button id="favPathBtn" class="path-chip">\u6536\u85CF\u5F53\u524D\u8DEF\u5F84</button>\n          <div id="pathShortcuts" class="path-list"></div>\n        </div>\n      </div>\n    </div>\n  </div>\n  <div class="filter-chips" id="filterChips"></div>\n  <div class="sticky-context" id="stickyContextBar" title="\u5F53\u524D\u6EDA\u52A8\u5C42\u7EA7">\n    <span class="sticky-context-label">\u5F53\u524D\u5C42\u7EA7</span>\n    <span class="sticky-context-path" id="stickyContextPath"></span>\n    <span class="sticky-context-summary" id="stickyContextSummary"></span>\n    <button id="stickyContextJump" type="button">\u5B9A\u4F4D</button>\n  </div>\n  <div class="sticky-table-head" id="stickyTableHead">\n    <div class="sticky-table-head-inner" id="stickyTableHeadInner"></div>\n  </div>\n  <div class="content" id="content"></div>\n</div>\n\n';
 
   // engine-bundle:virtual:engine-bundle
   var virtual_engine_bundle_default = `(() => {
@@ -968,6 +1024,40 @@
       return !hidden[col];
     });
     return visible.length ? visible : cols;
+  }
+  function getOrderedColumns(cols, path) {
+    var order = state.columnOrderByPath[path];
+    if (!order || !order.length) return cols;
+    var colSet = {};
+    cols.forEach(function(c) {
+      colSet[c] = true;
+    });
+    var seen = {};
+    var result = [];
+    order.forEach(function(c) {
+      if (colSet[c] && !seen[c]) {
+        result.push(c);
+        seen[c] = true;
+      }
+    });
+    cols.forEach(function(c) {
+      if (!seen[c]) {
+        result.push(c);
+        seen[c] = true;
+      }
+    });
+    return result;
+  }
+  function setColumnOrder(path, orderedCols) {
+    state.columnOrderByPath[path] = orderedCols.slice();
+    savePersistedState();
+    render();
+  }
+  function resetColumnOrder(path) {
+    if (!state.columnOrderByPath[path]) return;
+    delete state.columnOrderByPath[path];
+    savePersistedState();
+    render();
   }
   function setColumnVisible(path, col, visible) {
     var hidden = getHiddenColumns(path);
@@ -1118,6 +1208,128 @@
         setColumnFrozen(tid, col, !isColumnFrozen(tid, col));
       };
     });
+  }
+  function bindColumnReorderEvents() {
+    Array.prototype.forEach.call(dom.content.querySelectorAll("table.grid thead th.col-reorderable"), function(th) {
+      th.onmousedown = function(event) {
+        if (event.button !== 0) return;
+        if (event.target.closest && event.target.closest(".filter-btn, .col-freeze-btn, .tree-menu-btn, .col-resizer, .filter-menu")) return;
+        var table = th.closest("table.grid");
+        if (!table || !table.tHead || !table.tHead.rows[0]) return;
+        var tableId = table.getAttribute("data-table-id") || "$";
+        var headerCells = Array.prototype.slice.call(table.tHead.rows[0].cells);
+        var srcIdx = headerCells.indexOf(th);
+        if (srcIdx < 0) return;
+        var N = headerCells.length;
+        var frozenCount = 0;
+        for (var i = 0; i < N; i++) {
+          if (headerCells[i].classList.contains("frozen-col")) frozenCount++;
+          else break;
+        }
+        var srcIsFrozen = th.classList.contains("frozen-col");
+        var startX = event.clientX;
+        var startY = event.clientY;
+        var dragging = false;
+        var currentIndicator = null;
+        var lastInsertAt = null;
+        var moveTicking = false;
+        var lastMoveEvent = null;
+        function clearDropClasses() {
+          for (var k = 0; k < headerCells.length; k++) {
+            headerCells[k].classList.remove("col-drop-before", "col-drop-after");
+          }
+        }
+        function indicatorFor(insertAt) {
+          if (insertAt <= 0) return { th: headerCells[0], side: "before" };
+          if (insertAt >= N) return { th: headerCells[N - 1], side: "after" };
+          if (srcIsFrozen && insertAt === frozenCount) {
+            return { th: headerCells[frozenCount - 1], side: "after" };
+          }
+          return { th: headerCells[insertAt], side: "before" };
+        }
+        function computeInsertAt(clientX) {
+          var insertAt = N;
+          for (var i2 = 0; i2 < N; i2++) {
+            var rect = headerCells[i2].getBoundingClientRect();
+            if (clientX < rect.right) {
+              insertAt = clientX < (rect.left + rect.right) / 2 ? i2 : i2 + 1;
+              break;
+            }
+          }
+          if (srcIsFrozen) {
+            insertAt = Math.max(0, Math.min(insertAt, frozenCount));
+          } else {
+            insertAt = Math.max(frozenCount, Math.min(insertAt, N));
+          }
+          return insertAt;
+        }
+        function applyIndicator(clientX) {
+          var insertAt = computeInsertAt(clientX);
+          var ind = indicatorFor(insertAt);
+          if (currentIndicator && currentIndicator.th === ind.th && currentIndicator.side === ind.side) return insertAt;
+          clearDropClasses();
+          ind.th.classList.add(ind.side === "before" ? "col-drop-before" : "col-drop-after");
+          currentIndicator = ind;
+          return insertAt;
+        }
+        function onMove(me) {
+          lastMoveEvent = me;
+          if (moveTicking) return;
+          moveTicking = true;
+          requestAnimationFrame(function() {
+            moveTicking = false;
+            var e = lastMoveEvent;
+            if (!e) return;
+            if (!dragging) {
+              var dx = e.clientX - startX;
+              var dy = e.clientY - startY;
+              if (dx * dx + dy * dy < 25) return;
+              dragging = true;
+              document.body.classList.add("dragging-col");
+              th.classList.add("col-dragging");
+              var sel = window.getSelection && window.getSelection();
+              if (sel && sel.removeAllRanges) sel.removeAllRanges();
+            }
+            lastInsertAt = applyIndicator(e.clientX);
+          });
+        }
+        function onUp() {
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+          if (!dragging) return;
+          dragging = false;
+          document.body.classList.remove("dragging-col");
+          th.classList.remove("col-dragging");
+          clearDropClasses();
+          currentIndicator = null;
+          suppressNextClick();
+          if (lastInsertAt == null) return;
+          if (lastInsertAt === srcIdx || lastInsertAt === srcIdx + 1) return;
+          var renderCols = headerCells.map(function(c) {
+            return c.getAttribute("data-col-key") || "";
+          });
+          var actual = lastInsertAt > srcIdx ? lastInsertAt - 1 : lastInsertAt;
+          var moved = renderCols.splice(srcIdx, 1)[0];
+          renderCols.splice(actual, 0, moved);
+          setColumnOrder(tableId, renderCols);
+        }
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      };
+    });
+  }
+  function suppressNextClick() {
+    function teardown() {
+      window.removeEventListener("click", suppress, true);
+      document.removeEventListener("mousedown", teardown, true);
+    }
+    function suppress(ev) {
+      ev.stopPropagation();
+      ev.preventDefault();
+      teardown();
+    }
+    window.addEventListener("click", suppress, true);
+    document.addEventListener("mousedown", teardown, true);
   }
 
   // src/visualizer/engine/details-tree.js
@@ -1735,11 +1947,16 @@
   }
   function renderColumnSettingsPanel() {
     if (!state.currentAllColumns.length) {
+      if (dom.resetColOrderBtn) dom.resetColOrderBtn.hidden = true;
       dom.columnSettings.innerHTML = '<div class="muted" style="padding:6px 8px">\\u5F53\\u524D\\u4E0D\\u662F\\u5BF9\\u8C61\\u6570\\u7EC4\\u8868\\u683C</div>';
       return;
     }
     var hidden = getHiddenColumns(state.tablePath);
     var frozenSet = getFrozenColumns(state.tablePath);
+    if (dom.resetColOrderBtn) {
+      var savedOrder = state.columnOrderByPath[state.tablePath];
+      dom.resetColOrderBtn.hidden = !(savedOrder && savedOrder.length);
+    }
     dom.columnSettings.innerHTML = state.currentAllColumns.map(function(col) {
       var checked = hidden[col] ? "" : " checked";
       var fz = frozenSet[col];
@@ -1773,6 +1990,14 @@
         setColumnFrozen(state.tablePath, btn.getAttribute("data-col"), !isColumnFrozen(state.tablePath, btn.getAttribute("data-col")));
       };
     });
+    var resetBtn = dom.settingsMenu.querySelector(".reset-col-order");
+    if (resetBtn) {
+      resetBtn.onclick = function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        resetColumnOrder(state.tablePath);
+      };
+    }
     Array.prototype.forEach.call(dom.settingsMenu.querySelectorAll(".path-shortcut"), function(btn) {
       btn.onclick = function(event) {
         event.preventDefault();
@@ -2099,7 +2324,7 @@
     });
     var html = "";
     var fz = !!getFrozenColumns(tableId)[col];
-    html += '<th data-col-key="' + esc(col) + '"' + colWidthStyle(tableId, col) + (fz ? ' class="frozen-col"' : "") + ">";
+    html += '<th data-col-key="' + esc(col) + '"' + colWidthStyle(tableId, col) + ' class="col-reorderable' + (fz ? " frozen-col" : "") + '">';
     html += '<div class="th-wrap">';
     html += '<span class="th-left">';
     html += '<button class="th-title" data-col="' + esc(col) + '" title="\\u70B9\\u51FB\\u6392\\u5E8F">' + esc(col) + "</button>";
@@ -2200,6 +2425,18 @@
       });
       if (pruned) savePersistedState();
     }
+    var savedOrder = state.columnOrderByPath[pathKey];
+    if (savedOrder && savedOrder.length) {
+      var prunedOrder = savedOrder.filter(function(c) {
+        return allCols.indexOf(c) >= 0;
+      });
+      if (prunedOrder.length !== savedOrder.length) {
+        state.columnOrderByPath[pathKey] = prunedOrder;
+        savePersistedState();
+      }
+    }
+    var exportColumns = cols;
+    cols = getOrderedColumns(cols, pathKey);
     if (isRootTable && state.pendingFreezeFirstCol && allCols.length) {
       frozenSet = ensureFrozenColumns(pathKey);
       frozenSet[allCols[0]] = true;
@@ -2218,7 +2455,7 @@
     var activeCount = getActiveFilterCount();
     if (isRootTable) {
       state.currentAllColumns = allCols;
-      state.currentColumns = cols;
+      state.currentColumns = exportColumns;
       state.currentRows = sortedRows;
       setMeta(filtered.length + " / " + arr.length + " \\u884C \\xB7 " + cols.length + " / " + allCols.length + " \\u5217 \\xB7 " + renderMetaPath(pathKey) + (activeCount ? " \\xB7 " + activeCount + " \\u4E2A\\u8FC7\\u6EE4\\u6761\\u4EF6" : ""));
     }
@@ -2328,6 +2565,7 @@
       bindTreeMenuEvents();
       bindColumnResizeEvents();
       bindColumnFreezeEvents();
+      bindColumnReorderEvents();
       applyFrozenLayout();
       bindCopyEvents();
       bindStickyContextEvents();
@@ -2608,6 +2846,7 @@
     dom.parseJsonStringCheck = document.getElementById("parseJsonStringCheck");
     dom.headerModeSelect = document.getElementById("headerModeSelect");
     dom.columnSettings = document.getElementById("columnSettings");
+    dom.resetColOrderBtn = document.getElementById("resetColOrderBtn");
     dom.copyPathBtn = document.getElementById("copyPathBtn");
     dom.copyJsonBtn = document.getElementById("copyJsonBtn");
     dom.exportJsonBtn = document.getElementById("exportJsonBtn");
@@ -2634,6 +2873,7 @@
     columnWidths: {},
     hiddenColumnsByPath: {},
     frozenColumnsByPath: {},
+    columnOrderByPath: {},
     pendingFreezeFirstCol: false,
     renderedNodesByPath: {},
     parseFailureSamples: {},
@@ -2671,6 +2911,7 @@
       state.hiddenColumnsByPath = isPlainObject(persisted.hiddenColumnsByPath) ? persisted.hiddenColumnsByPath : {};
       var hadFrozenColumns = Object.prototype.hasOwnProperty.call(persisted, "frozenColumnsByPath");
       state.frozenColumnsByPath = isPlainObject(persisted.frozenColumnsByPath) ? persisted.frozenColumnsByPath : {};
+      state.columnOrderByPath = isPlainObject(persisted.columnOrderByPath) ? persisted.columnOrderByPath : {};
       state.favoritePaths = isPlainObject(persisted.favoritePaths) ? persisted.favoritePaths : {};
       state.recentPaths = Array.isArray(persisted.recentPaths) && persisted.recentPaths.length ? persisted.recentPaths.slice(0, 6) : state.recentPaths;
       if (state.freezeHeader && !hadFrozenColumns) state.pendingFreezeFirstCol = true;
@@ -2687,6 +2928,7 @@
       columnWidths: state.columnWidths,
       hiddenColumnsByPath: state.hiddenColumnsByPath,
       frozenColumnsByPath: state.frozenColumnsByPath,
+      columnOrderByPath: state.columnOrderByPath,
       favoritePaths: state.favoritePaths,
       recentPaths: state.recentPaths
     }));
