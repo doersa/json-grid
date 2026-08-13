@@ -3,6 +3,13 @@
 
 import { el } from "./state.js";
 import { setInputPaneCollapsed, setStatus } from "./split-pane.js";
+import {
+  getEditorValue,
+  setEditorValue,
+  getCurrentCursor,
+  setEditorSelection,
+  revealEditorPosition,
+} from "./editor.js";
 export function pathToSegments(path) {
   if (!path || path === '$') return [];
   const segments = [];
@@ -48,15 +55,18 @@ export function locateJsonPath(displayPath) {
 
   let root;
   try {
-    root = JSON.parse(el.input.value);
+    root = JSON.parse(getEditorValue());
   } catch (err) {
     setStatus('左侧 JSON 无效，无法定位', 'error');
     return;
   }
 
   const sourcePath = sourcePathFromDisplayPath(displayPath, root);
+
+  // 统一视图：先把编辑器的 JSON 规整为 2 空格标准形式（路径坐标以标准形式计算），
+  // 再通过选择 + 滚动把目标定位到视野中央，并与右侧表格联动。
   const formatted = JSON.stringify(root, null, 2);
-  if (el.input.value !== formatted) el.input.value = formatted;
+  if (getEditorValue() !== formatted) setEditorValue(formatted);
 
   const location = resolveJsonLocation(root, formatted, sourcePath);
   if (!location || location.cursor < 0) {
@@ -65,11 +75,8 @@ export function locateJsonPath(displayPath) {
   }
 
   setInputPaneCollapsed(false);
-  el.input.focus();
-  el.input.setSelectionRange(location.cursor, location.cursor + location.length);
-  el.input.scrollTop = estimateScrollTop(el.input, location.cursor);
-  el.input.classList.remove('locating');
-  requestAnimationFrame(() => el.input.classList.add('locating'));
+  setEditorSelection(location.cursor, location.cursor + location.length);
+  revealEditorPosition(location.cursor);
   setStatus('已定位 · ' + sourcePath, 'ok');
 }
 
@@ -253,17 +260,15 @@ export function collectJsonPaths(value, path, output, depth = 0) {
 export function pathFromInputCursor() {
   let root;
   try {
-    root = JSON.parse(el.input.value);
+    root = JSON.parse(getEditorValue());
   } catch (err) {
     return '';
   }
 
   const formatted = JSON.stringify(root, null, 2);
-  if (el.input.value !== formatted) return '';
+  if (getEditorValue() !== formatted) return '';
 
-  const cursor = el.input.selectionEnd > el.input.selectionStart
-    ? Math.floor((el.input.selectionStart + el.input.selectionEnd) / 2)
-    : (el.input.selectionStart || 0);
+  const cursor = getCurrentCursor();
   const index = buildTextPathIndex(root, formatted);
   const lineHit = findLinePathHit(index, cursor, root, formatted);
   if (lineHit) return displayPathFromSourcePath(lineHit, root);
@@ -480,11 +485,4 @@ export function firstNonSpace(text, start) {
   let pos = start;
   while (/\s/.test(text[pos] || '')) pos += 1;
   return pos;
-}
-
-export function estimateScrollTop(textarea, cursor) {
-  const before = textarea.value.slice(0, cursor);
-  const line = before.split('\n').length - 1;
-  const lineHeight = 18.6;
-  return Math.max(0, line * lineHeight - textarea.clientHeight * 0.35);
 }

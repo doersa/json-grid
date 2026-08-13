@@ -39,7 +39,7 @@ await new Promise((r) => setTimeout(r, 300));
 const doc = window.document;
 
 check("window.__jsonGridVisualizer 已暴露", typeof window.__jsonGridVisualizer === "function");
-check("左侧输入框填充了示例 JSON", (doc.getElementById("jsonInput")?.value || "").includes("request_id"));
+check("左侧编辑器填充了示例 JSON", (doc.querySelector("#jsonEditor .cm-content")?.textContent || "").includes("request_id"));
 
 const status = doc.getElementById("status")?.textContent || "";
 check("状态栏显示已渲染", status.startsWith("已渲染"), status);

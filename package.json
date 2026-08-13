@@ -12,6 +12,8 @@
     "preview": "wrangler dev"
   },
   "devDependencies": {
+    "@codemirror/lang-json": "^6.0.2",
+    "codemirror": "^6.0.2",
     "esbuild": "^0.28.2",
     "jsdom": "^30.0.1"
   }

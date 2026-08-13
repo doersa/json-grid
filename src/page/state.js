@@ -10,11 +10,12 @@ export const SPLIT_HANDLE_WIDTH = 8;
 
 export const el = {
   app: document.querySelector('.app'),
-  input: document.getElementById('jsonInput'),
   preview: document.getElementById('preview'),
   status: document.getElementById('status'),
   splitResizer: document.getElementById('splitResizer'),
   paneToggleBtn: document.getElementById('paneToggleBtn'),
+  foldExpandAll: document.getElementById('foldExpandAll'),
+  foldCollapseAll: document.getElementById('foldCollapseAll'),
 };
 
 export const ui = {
