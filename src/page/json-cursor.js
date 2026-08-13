@@ -42,6 +42,10 @@ export function displayPathFromSourcePath(sourcePath, root) {
 }
 
 export function locateJsonPath(displayPath) {
+  // 左侧 JSON 面板被用户收起时，不强制展开、不抢焦点——单元格点击仅作定位用，
+  // 面板隐藏时定位无可视意义（状态栏也位于收起面板内，无法反馈）。
+  if (el.app.classList.contains('input-collapsed')) return;
+
   let root;
   try {
     root = JSON.parse(el.input.value);

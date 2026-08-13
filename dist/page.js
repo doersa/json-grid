@@ -132,6 +132,7 @@
     return sourcePath;
   }
   function locateJsonPath(displayPath) {
+    if (el.app.classList.contains("input-collapsed")) return;
     let root;
     try {
       root = JSON.parse(el.input.value);
