@@ -521,7 +521,8 @@
   table.grid th.col-reorderable.col-drop-after {
     box-shadow: inset -2px 0 0 #2563eb;
   }
-    .th-wrap {
+
+  .th-wrap {
     position: relative;
     display: flex;
     align-items: center;
