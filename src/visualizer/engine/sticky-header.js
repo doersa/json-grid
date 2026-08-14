@@ -125,11 +125,20 @@ function pinFrozenClones(container) {
   });
 }
 
-export function getRootHeaderMetrics(contentRect) {  var rootHead = dom.content.querySelector("table.root-grid > thead");
+export function getRootHeaderMetrics(contentRect) {
+  var rootHead = dom.content.querySelector("table.root-grid > thead");
   if (!rootHead) return { bottom: contentRect.top, height: 36 };
 
   var rect = rootHead.getBoundingClientRect();
   var height = Math.max(28, Math.round(rect.height || 36));
+  // 固定表头（freeze-header）模式下，根表头永远钉在滚动容器顶部（top:0），
+  // 其视觉顶部恒为 contentRect.top。浮动克隆必须落在它正下方，绝不能压在
+  // 固定表头上。注意：sticky 只作用在内部 th 上，thead 自身并不 sticky，
+  // 因此 thead.getBoundingClientRect() 返回的是“自然滚动位置”而非“钉住后
+  // 的位置”——直接用它算 minTop 会让浮动头盖住固定表头。这里强制用钉住后的底边。
+  if (state.freezeHeader) {
+    return { bottom: contentRect.top + height, height: height };
+  }
   if (rect.bottom <= contentRect.top || rect.top > contentRect.top + 4) {
     return { bottom: contentRect.top, height: height };
   }
@@ -194,8 +203,9 @@ export function updateSingleStickyTableHead(item) {
   });
 
   var rootTable = dom.content.querySelector("table.root-grid");
-  // 根表头只有在“已滚出视口顶部”时才需要浮动；仍在原位时原生表头可见，不必重复浮动。
-  if (rootTable && rootTable.tHead) {
+  // 固定表头模式下，根表头永远钉在顶部可见，无需再浮动一份（否则会与固定表头重叠/重复）。
+  // 仅当非固定模式且根表头已滚出视口顶部时，才需要浮动克隆来填补顶部空白带。
+  if (!state.freezeHeader && rootTable && rootTable.tHead) {
     var rootHeadRect = rootTable.tHead.getBoundingClientRect();
     if (rootHeadRect.top < contentRect.top) {
       var rootMetric = computeStickyMetric(rootTable, contentRect, contentRect.top);
@@ -228,8 +238,13 @@ export function updateSingleStickyTableHead(item) {
   dom.stickyTableHead.style.left = Math.round(metric.left) + "px";
   dom.stickyTableHead.style.top = Math.round(minTop) + "px";
   dom.stickyTableHead.style.width = Math.round(metric.width) + "px";
-  dom.stickyTableHead.style.height = Math.round(metric.height) + "px";
-  dom.stickyTableHeadInner.style.height = Math.round(metric.height) + "px";
+  // 用 minHeight 而非 height：当 .th-title 因列窄换行（v3 修法）时行高会
+  // 超过原 thead 的单行高度，外层容器需要随之撑高；内容刚好一行时按
+  // minHeight = 原行高，与 legacy 视觉等价。
+  dom.stickyTableHead.style.minHeight = Math.round(metric.height) + "px";
+  dom.stickyTableHead.style.height = "auto";
+  dom.stickyTableHeadInner.style.minHeight = Math.round(metric.height) + "px";
+  dom.stickyTableHeadInner.style.height = "auto";
   dom.stickyTableHeadInner.style.marginLeft = "0px";
   dom.stickyTableHeadInner.style.width = Math.round(metric.tableRect.width) + "px";
   // Pin after the head's size is applied so th.getBoundingClientRect().width
@@ -249,8 +264,9 @@ export function updateMultiStickyTableHead() {
 
   // 根表（主记录表）滚动出视口顶部时也要作为最顶层浮动层，否则主表头消失后
   // 顶部会留一条空白带（与单层模式同样的根表浮动需求）。
+  // 固定表头模式下根表头始终可见，故跳过，避免与固定表头重叠/重复。
   var rootTable = dom.content.querySelector("table.root-grid");
-  if (rootTable && rootTable.tHead) {
+  if (!state.freezeHeader && rootTable && rootTable.tHead) {
     var rootHeadRect = rootTable.tHead.getBoundingClientRect();
     if (rootHeadRect.top < contentRect.top) {
       var rootMetric = computeStickyMetric(rootTable, contentRect, contentRect.top);

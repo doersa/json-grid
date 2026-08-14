@@ -367,6 +367,16 @@
     padding: 12px;
   }
 
+  /* \u56FA\u5B9A\u8868\u5934\u6A21\u5F0F\u4E0B\uFF0C\u5185\u5BB9\u533A\u9876\u90E8\u4E0D\u7559 padding\uFF0C\u8BA9 sticky \u8868\u5934\u80FD\u7D27\u8D34\u5185\u5BB9\u533A\u57DF\u9876\u90E8\uFF1B
+     \u901A\u8FC7\u4E3A\u9996\u5B50\u5143\u7D20\u52A0 margin-top \u4FDD\u6301\u672A\u6EDA\u52A8\u65F6\u4E0E\u9876\u90E8\u7684\u547C\u5438\u95F4\u8DDD\u3002 */
+  .content.freeze-header {
+    padding-top: 0;
+  }
+
+  .content.freeze-header > *:first-child {
+    margin-top: 12px;
+  }
+
   table.grid {
     width: 100%;
     border-collapse: collapse;
@@ -403,7 +413,13 @@
   .content.freeze-header table.root-grid > thead th {
     position: sticky;
     top: 0;
-    z-index: 3;
+    /* \u5FC5\u987B\u4ECB\u4E8E\u6D6E\u52A8\u8868\u5934\uFF08.sticky-table-head z-index:40\uFF09\u4E0E\u8BBE\u7F6E\u83DC\u5355
+       (.settings-menu z-index:50) \u4E4B\u95F4\uFF1A
+         - \u9AD8\u4E8E 40\uFF0C\u9632\u6B62\u56FA\u5B9A\u8868\u5934\u88AB\u6D6E\u52A8\u8868\u5934\u76D6\u4F4F\uFF1B
+         - \u4F4E\u4E8E 50\uFF0C\u9632\u6B62\u56FA\u5B9A\u8868\u5934\uFF08\u5728 .content \u91CC\uFF0CDOM \u987A\u5E8F\u665A\u4E8E .bar\uFF09
+           \u53CD\u800C\u76D6\u4F4F\u8BBE\u7F6E\u83DC\u5355\u9876\u90E8\u3002
+       \u5176\u4ED6\u5F39\u5C42\uFF08\u6811\u83DC\u5355 9999 \u7B49\uFF09\u8FDC\u9AD8\u4E8E\u6B64\u503C\uFF0C\u4E0D\u53D7\u5F71\u54CD\u3002 */
+    z-index: 45;
   }
 
   table.grid .key-col,
@@ -950,7 +966,7 @@
   }
 
   .sticky-table-head table {
-    height: 100%;
+    height: auto;
     border-collapse: collapse;
     table-layout: fixed;
     background: #f3f4f6;
@@ -958,15 +974,16 @@
 
   .sticky-table-head thead,
   .sticky-table-head tr {
-    height: 100%;
+    height: auto;
   }
 
   .sticky-table-head th {
     box-sizing: border-box;
-    height: 100%;
+    /* \u4E0D\u5F3A\u5236 height: 100%\uFF0C\u8BA9\u884C\u9AD8\u6309\u5185\u5BB9\u81EA\u7136\u6491\u5F00\uFF1B
+       \u5F53 .th-title \u591A\u884C\u6362\u884C\uFF08\u957F\u5217\u540D+\u7A84\u5217\uFF09\u65F6\u6574\u884C\u53D8\u9AD8\uFF0C\u907F\u514D\u8986\u76D6\u4E0B\u65B9\u6570\u636E\u3002 */
+    height: auto;
     border-right: 1px solid #eef0f3;
     padding: 8px 10px;
-    overflow: hidden;
     color: #4b5563;
     background: #f3f4f6;
     font-size: 12px;
@@ -976,11 +993,26 @@
 
   .sticky-table-head .th-wrap,
   .sticky-table-head .th-left {
-    height: 100%;
-    overflow: hidden;
+    /* \u79FB\u9664 height: 100%\uFF0C\u4EA4\u7ED9\u5185\u5BB9\u9A71\u52A8\uFF1Bwrap \u65F6\u884C\u9AD8\u81EA\u52A8\u6491\u5F00\u3002 */
+    height: auto;
+    overflow: visible;
     align-items: center;
   }
 
+  /* \u6D6E\u52A8\u8868\u5934\u5217\u540D\u6362\u884C\uFF1A\u5217\u5BBD\u7A84\u65F6\u6574\u5217\u540D\u6362\u5230 2-3 \u884C\u663E\u793A\uFF0C\u4E0D\u518D\u88AB\u622A\u65AD\u4E3A\u7701\u7565\u53F7\uFF0C
+     \u4E5F\u4E0D\u518D\u4F9D\u8D56 z-index/\u80CC\u666F\u8986\u76D6\u540E\u6392\u6309\u94AE\u3002\u6309\u94AE\uFF08\u6392\u5E8F/\u8FC7\u6EE4/\u51BB\u7ED3\uFF09\u4FDD\u6301\u539F\u6837
+     \u5728\u6807\u9898\u4E4B\u540E\u81EA\u7136\u6392\u5217\uFF0C\u51BB\u7ED3\u5217\u7684\u84DD\u9501\u7B49\u6FC0\u6D3B\u6001\u4ECD\u53EF\u89C1\u3002 */
+  .sticky-table-head .th-title {
+    white-space: normal;
+    overflow: visible;
+    word-break: break-word;
+    text-align: left;
+  }
+
+  /* \u6D6E\u52A8\u5934\u53EA\u9690\u85CF\u65E0\u610F\u4E49\u7684\u300C\u62D6\u62FD\u624B\u67C4\u300D\u4E0E\u300C\u8FC7\u6EE4\u4E0B\u62C9\u9762\u677F\u300D\uFF1B\u5217\u540D\u3001\u51BB\u7ED3/\u8FC7\u6EE4
+     \u6FC0\u6D3B\u6001\u3001\u6392\u5E8F\u6807\u8BB0\u7B49\u72B6\u6001\u6307\u793A\u5168\u90E8\u4FDD\u7559\uFF0C\u786E\u4FDD\u4E0E\u539F\u8868\u5934\u89C6\u89C9\u4E00\u81F4\u3002
+     \uFF08\u975E\u6FC0\u6D3B\u7684\u8FC7\u6EE4/\u51BB\u7ED3/\u6811\u5F62\u6309\u94AE\u5728\u539F\u8868\u5934\u672C\u5C31\u662F opacity:0\uFF0Chover \u624D\u6DE1\u5165\uFF1B
+       \u6D6E\u52A8\u5934 pointer-events:none \u4E0D\u4F1A hover\uFF0C\u6545\u5929\u7136\u4E0D\u53EF\u89C1\uFF0C\u65E0\u9700\u989D\u5916\u9690\u85CF\u3002\uFF09 */
   .sticky-table-head .filter-menu,
   .sticky-table-head .col-resizer {
     display: none;
@@ -2120,6 +2152,9 @@
     if (!rootHead) return { bottom: contentRect.top, height: 36 };
     var rect = rootHead.getBoundingClientRect();
     var height = Math.max(28, Math.round(rect.height || 36));
+    if (state.freezeHeader) {
+      return { bottom: contentRect.top + height, height };
+    }
     if (rect.bottom <= contentRect.top || rect.top > contentRect.top + 4) {
       return { bottom: contentRect.top, height };
     }
@@ -2166,7 +2201,7 @@
       if (m) candidates.push({ item: it, metric: m, depth: Number(it.getAttribute("data-depth") || 0), isRoot: false });
     });
     var rootTable = dom.content.querySelector("table.root-grid");
-    if (rootTable && rootTable.tHead) {
+    if (!state.freezeHeader && rootTable && rootTable.tHead) {
       var rootHeadRect = rootTable.tHead.getBoundingClientRect();
       if (rootHeadRect.top < contentRect.top) {
         var rootMetric = computeStickyMetric(rootTable, contentRect, contentRect.top);
@@ -2193,8 +2228,10 @@
     dom.stickyTableHead.style.left = Math.round(metric.left) + "px";
     dom.stickyTableHead.style.top = Math.round(minTop) + "px";
     dom.stickyTableHead.style.width = Math.round(metric.width) + "px";
-    dom.stickyTableHead.style.height = Math.round(metric.height) + "px";
-    dom.stickyTableHeadInner.style.height = Math.round(metric.height) + "px";
+    dom.stickyTableHead.style.minHeight = Math.round(metric.height) + "px";
+    dom.stickyTableHead.style.height = "auto";
+    dom.stickyTableHeadInner.style.minHeight = Math.round(metric.height) + "px";
+    dom.stickyTableHeadInner.style.height = "auto";
     dom.stickyTableHeadInner.style.marginLeft = "0px";
     dom.stickyTableHeadInner.style.width = Math.round(metric.tableRect.width) + "px";
     if (keyChanged) {
@@ -2210,7 +2247,7 @@
     var layers = [];
     var candidates = [];
     var rootTable = dom.content.querySelector("table.root-grid");
-    if (rootTable && rootTable.tHead) {
+    if (!state.freezeHeader && rootTable && rootTable.tHead) {
       var rootHeadRect = rootTable.tHead.getBoundingClientRect();
       if (rootHeadRect.top < contentRect.top) {
         var rootMetric = computeStickyMetric(rootTable, contentRect, contentRect.top);

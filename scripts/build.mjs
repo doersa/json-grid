@@ -70,7 +70,22 @@ async function buildAll() {
   fs.mkdirSync(path.join(root, "dist"), { recursive: true });
   fs.writeFileSync(path.join(root, "dist/visualizer.js"), guardCloseTags("dist/visualizer.js", viz.outputFiles[0].text));
   fs.writeFileSync(path.join(root, "dist/page.js"), guardCloseTags("dist/page.js", page.outputFiles[0].text));
-  console.log("构建完成: dist/visualizer.js, dist/page.js");
+
+  // 宿主页样式并进 dist/，使 dist/ 成为自包含目录。
+  // 注意：根 index.html 仍引用 src/page/page.css（改 CSS 免构建即可刷新预览），
+  // 这里只让 dist/ 单独自包含，不影响本地开发流程。
+  fs.copyFileSync(path.join(root, "src/page/page.css"), path.join(root, "dist/page.css"));
+
+  // 生成 dist/index.html：把根 index.html 的资源引用改写为相对 ./ 路径，
+  // 使 dist/ 单目录即可直接双击打开（运行时零外部依赖、无网络请求）。
+  const pageHtml = fs
+    .readFileSync(path.join(root, "index.html"), "utf8")
+    .replace(/dist\/visualizer\.js/g, "./visualizer.js")
+    .replace(/dist\/page\.js/g, "./page.js")
+    .replace(/src\/page\/page\.css/g, "./page.css");
+  fs.writeFileSync(path.join(root, "dist/index.html"), pageHtml);
+
+  console.log("构建完成: dist/visualizer.js, dist/page.js, dist/page.css, dist/index.html");
 }
 
 if (watch) {
