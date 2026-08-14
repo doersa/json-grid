@@ -367,6 +367,16 @@
     padding: 12px;
   }
 
+  /* \u56FA\u5B9A\u8868\u5934\u6A21\u5F0F\u4E0B\uFF0C\u5185\u5BB9\u533A\u9876\u90E8\u4E0D\u7559 padding\uFF0C\u8BA9 sticky \u8868\u5934\u80FD\u7D27\u8D34\u5185\u5BB9\u533A\u57DF\u9876\u90E8\uFF1B
+     \u901A\u8FC7\u4E3A\u9996\u5B50\u5143\u7D20\u52A0 margin-top \u4FDD\u6301\u672A\u6EDA\u52A8\u65F6\u4E0E\u9876\u90E8\u7684\u547C\u5438\u95F4\u8DDD\u3002 */
+  .content.freeze-header {
+    padding-top: 0;
+  }
+
+  .content.freeze-header > *:first-child {
+    margin-top: 12px;
+  }
+
   table.grid {
     width: 100%;
     border-collapse: collapse;

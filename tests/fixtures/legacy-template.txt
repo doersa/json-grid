@@ -366,6 +366,16 @@
     padding: 12px;
   }
 
+  /* 固定表头模式下，内容区顶部不留 padding，让 sticky 表头能紧贴内容区域顶部；
+     通过为首子元素加 margin-top 保持未滚动时与顶部的呼吸间距。 */
+  .content.freeze-header {
+    padding-top: 0;
+  }
+
+  .content.freeze-header > *:first-child {
+    margin-top: 12px;
+  }
+
   table.grid {
     width: 100%;
     border-collapse: collapse;
