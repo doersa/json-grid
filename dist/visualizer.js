@@ -403,7 +403,13 @@
   .content.freeze-header table.root-grid > thead th {
     position: sticky;
     top: 0;
-    z-index: 3;
+    /* \u5FC5\u987B\u4ECB\u4E8E\u6D6E\u52A8\u8868\u5934\uFF08.sticky-table-head z-index:40\uFF09\u4E0E\u8BBE\u7F6E\u83DC\u5355
+       (.settings-menu z-index:50) \u4E4B\u95F4\uFF1A
+         - \u9AD8\u4E8E 40\uFF0C\u9632\u6B62\u56FA\u5B9A\u8868\u5934\u88AB\u6D6E\u52A8\u8868\u5934\u76D6\u4F4F\uFF1B
+         - \u4F4E\u4E8E 50\uFF0C\u9632\u6B62\u56FA\u5B9A\u8868\u5934\uFF08\u5728 .content \u91CC\uFF0CDOM \u987A\u5E8F\u665A\u4E8E .bar\uFF09
+           \u53CD\u800C\u76D6\u4F4F\u8BBE\u7F6E\u83DC\u5355\u9876\u90E8\u3002
+       \u5176\u4ED6\u5F39\u5C42\uFF08\u6811\u83DC\u5355 9999 \u7B49\uFF09\u8FDC\u9AD8\u4E8E\u6B64\u503C\uFF0C\u4E0D\u53D7\u5F71\u54CD\u3002 */
+    z-index: 45;
   }
 
   table.grid .key-col,
@@ -2136,6 +2142,9 @@
     if (!rootHead) return { bottom: contentRect.top, height: 36 };
     var rect = rootHead.getBoundingClientRect();
     var height = Math.max(28, Math.round(rect.height || 36));
+    if (state.freezeHeader) {
+      return { bottom: contentRect.top + height, height };
+    }
     if (rect.bottom <= contentRect.top || rect.top > contentRect.top + 4) {
       return { bottom: contentRect.top, height };
     }
@@ -2182,7 +2191,7 @@
       if (m) candidates.push({ item: it, metric: m, depth: Number(it.getAttribute("data-depth") || 0), isRoot: false });
     });
     var rootTable = dom.content.querySelector("table.root-grid");
-    if (rootTable && rootTable.tHead) {
+    if (!state.freezeHeader && rootTable && rootTable.tHead) {
       var rootHeadRect = rootTable.tHead.getBoundingClientRect();
       if (rootHeadRect.top < contentRect.top) {
         var rootMetric = computeStickyMetric(rootTable, contentRect, contentRect.top);
@@ -2228,7 +2237,7 @@
     var layers = [];
     var candidates = [];
     var rootTable = dom.content.querySelector("table.root-grid");
-    if (rootTable && rootTable.tHead) {
+    if (!state.freezeHeader && rootTable && rootTable.tHead) {
       var rootHeadRect = rootTable.tHead.getBoundingClientRect();
       if (rootHeadRect.top < contentRect.top) {
         var rootMetric = computeStickyMetric(rootTable, contentRect, contentRect.top);

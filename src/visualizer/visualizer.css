@@ -401,7 +401,13 @@
   .content.freeze-header table.root-grid > thead th {
     position: sticky;
     top: 0;
-    z-index: 3;
+    /* 必须介于浮动表头（.sticky-table-head z-index:40）与设置菜单
+       (.settings-menu z-index:50) 之间：
+         - 高于 40，防止固定表头被浮动表头盖住；
+         - 低于 50，防止固定表头（在 .content 里，DOM 顺序晚于 .bar）
+           反而盖住设置菜单顶部。
+       其他弹层（树菜单 9999 等）远高于此值，不受影响。 */
+    z-index: 45;
   }
 
   table.grid .key-col,
