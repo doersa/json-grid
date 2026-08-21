@@ -29,7 +29,9 @@ const appTheme = EditorView.theme(
       border: "none",
     },
     ".cm-activeLineGutter": { backgroundColor: "#f3f4f6" },
-    ".cm-activeLine": { backgroundColor: "#f8fafc" },
+    // 注意：选中层绘制在行背景之下，活动行背景必须半透明，
+    // 否则会完全遮住本行的选中高亮（CodeMirror 默认主题即用半透明色）。
+    ".cm-activeLine": { backgroundColor: "rgba(148, 163, 184, 0.09)" },
     ".cm-foldGutter span": { color: "#6b7280", cursor: "pointer" },
     ".cm-foldPlaceholder": {
       backgroundColor: "#f3f4f6",
@@ -40,6 +42,12 @@ const appTheme = EditorView.theme(
       margin: "0 2px",
     },
     "&.cm-focused .cm-matchingBracket": { backgroundColor: "#dbeafe", outline: "none" },
+    // 选中区底色：CodeMirror 默认浅紫（#d7d4f0）在白底上几乎不可见，
+    // 失焦后还会退化为更浅的灰（#d9d9d9），统一改为更明显的蓝色。
+    ".cm-selectionBackground": { backgroundColor: "#bfdbfe" },
+    "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
+      backgroundColor: "#93c5fd",
+    },
   },
   { dark: false }
 );
